@@ -1,3 +1,4 @@
+using OrderService.Domain.Constants;
 using OrderService.Domain.Exceptions;
 
 namespace OrderService.Domain.Entities;
@@ -7,12 +8,14 @@ public class Order
     public Guid Id { get; private set; }
     public int TableNumber { get; private set; }
     public Guid WaiterId { get; private set; }
-    public string Status { get; private set; } = OrderStatus.Open;
+    public int StatusId { get; private set; } = OrderStatusIds.Open;
     public decimal Total { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public DateTime? ClosedAt { get; private set; }
-    public byte[] Version { get; private set; }
+    public byte[] Version { get; private set; } = [];
+
+    public Status Status { get; private set; } = null!;
 
     public ICollection<OrderItem> Items { get; private set; } = new List<OrderItem>();
     public ICollection<OrderNote> Notes { get; private set; } = new List<OrderNote>();
@@ -27,7 +30,7 @@ public class Order
             Id = Guid.NewGuid(),
             TableNumber = tableNumber,
             WaiterId = waiterId,
-            Status = OrderStatus.Open,
+            StatusId = OrderStatusIds.Open,
             Total = 0,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -47,32 +50,32 @@ public class Order
         EnsureOrderIsModifiable();
 
         var item = Items.FirstOrDefault(i => i.Id == itemId)
-            ?? throw new DomainException($"Item {itemId} not found in order.");
+            ?? throw new DomainException($"El item {itemId} no fue encontrado en la orden.");
         Items.Remove(item);
         RecalculateTotal();
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public OrderStatusHistory ChangeStatus(string newStatus, Guid changedByUserId)
+    public OrderStatusHistory ChangeStatus(int newStatusId, Guid changedByUserId)
     {
-        if (!OrderStatus.IsValidTransition(Status, newStatus))
-            throw new DomainException($"Cannot transition from '{Status}' to '{newStatus}'.");
+        if (!OrderStatusIds.IsValidTransition(StatusId, newStatusId))
+            throw new DomainException($"No se puede cambiar del estado '{StatusId}' al estado '{newStatusId}'.");
 
         var history = new OrderStatusHistory
         {
             Id = Guid.NewGuid(),
             OrderId = Id,
-            PreviousStatus = Status,
-            NewStatus = newStatus,
+            PreviousStatusId = StatusId,
+            NewStatusId = newStatusId,
             ChangedByUserId = changedByUserId,
             ChangedAt = DateTime.UtcNow
         };
 
         StatusHistory.Add(history);
-        Status = newStatus;
+        StatusId = newStatusId;
         UpdatedAt = DateTime.UtcNow;
 
-        if (newStatus == OrderStatus.Closed)
+        if (newStatusId == OrderStatusIds.Closed)
             ClosedAt = DateTime.UtcNow;
 
         return history;
@@ -103,8 +106,8 @@ public class Order
 
     private void EnsureOrderIsModifiable()
     {
-        if (Status == OrderStatus.Closed || Status == OrderStatus.Cancelled)
+        if (StatusId == OrderStatusIds.Closed || StatusId == OrderStatusIds.Cancelled)
             throw new DomainException(
-                $"Cannot modify order in '{Status}' status. Only open orders can be modified.");
+                $"No se puede modificar una orden en estado '{StatusId}'. Solo se pueden modificar ordenes abiertas.");
     }
 }

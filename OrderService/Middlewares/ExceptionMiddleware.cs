@@ -1,46 +1,62 @@
-﻿using System.Net;
-using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
+﻿using OrderService.Application.DTOs;
 using OrderService.Domain.Exceptions;
 
 namespace OrderService.Presentation.Middlewares;
 
-public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
+public sealed class ExceptionMiddleware
 {
+    private readonly RequestDelegate _next;
+    private readonly ILogger<ExceptionMiddleware> _logger;
+
+    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await next(context);
+            await _next(context);
         }
-        catch (NotFoundException ex)
+        catch (ValidationException exception)
         {
-            logger.LogWarning(ex.Message);
-            await WriteErrorAsync(context, HttpStatusCode.NotFound, ex.Message);
+            await WriteErrorAsync(context, StatusCodes.Status400BadRequest, exception.Message);
         }
-        catch (DomainException ex)
+        catch (NotFoundException exception)
         {
-            logger.LogWarning(ex.Message);
-            await WriteErrorAsync(context, HttpStatusCode.BadRequest, ex.Message);
+            await WriteErrorAsync(context, StatusCodes.Status404NotFound, exception.Message);
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (ConflictException exception)
         {
-            logger.LogWarning("Concurrency conflict: {msg}", ex.Message);
-            await WriteErrorAsync(context, HttpStatusCode.Conflict,
-                "The record was modified by another user. Please reload and try again.");
+            await WriteErrorAsync(context, StatusCodes.Status409Conflict, exception.Message);
         }
-        catch (Exception ex)
+        catch (UnauthorizedException exception)
         {
-            logger.LogError(ex, "Unhandled exception");
-            await WriteErrorAsync(context, HttpStatusCode.InternalServerError, "An unexpected error occurred.");
+            await WriteErrorAsync(context, StatusCodes.Status401Unauthorized, exception.Message);
+        }
+        catch (DomainException exception)
+        {
+            await WriteErrorAsync(context, StatusCodes.Status400BadRequest, exception.Message);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Ocurrio una excepcion no controlada mientras se procesaba la solicitud.");
+            await WriteErrorAsync(context, StatusCodes.Status500InternalServerError, "Ocurrio un error inesperado.");
         }
     }
 
-    private static Task WriteErrorAsync(HttpContext ctx, HttpStatusCode code, string message)
+    private static Task WriteErrorAsync(HttpContext context, int statusCode, string message)
     {
-        ctx.Response.ContentType = "application/json";
-        ctx.Response.StatusCode = (int)code;
-        var body = JsonSerializer.Serialize(new { error = message, statusCode = (int)code });
-        return ctx.Response.WriteAsync(body);
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json";
+
+        return context.Response.WriteAsJsonAsync(new ErrorResponseDto
+        {
+            Message = message,
+            StatusCode = statusCode,
+            Timestamp = DateTime.UtcNow
+        });
     }
 }

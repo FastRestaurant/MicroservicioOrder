@@ -1,0 +1,97 @@
+@OrderService_HostAddress = http://localhost:5231
+@orderId = 00000000-0000-0000-0000-000000000000
+@itemId = 00000000-0000-0000-0000-000000000000
+@waiterId = 00000000-0000-0000-0000-000000000000
+@userId = 00000000-0000-0000-0000-000000000000
+@productId = 00000000-0000-0000-0000-000000000000
+
+GET {{OrderService_HostAddress}}/api/v1/orders?page=1&pageSize=10
+Accept: application/json
+
+###
+
+GET {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}
+Accept: application/json
+
+###
+
+GET {{OrderService_HostAddress}}/api/v1/orders/status/Open
+Accept: application/json
+
+###
+
+GET {{OrderService_HostAddress}}/api/v1/orders/table/1
+Accept: application/json
+
+###
+
+GET {{OrderService_HostAddress}}/api/v1/orders/statuses
+Accept: application/json
+
+###
+
+GET {{OrderService_HostAddress}}/api/v1/orders/item-statuses
+Accept: application/json
+
+###
+
+POST {{OrderService_HostAddress}}/api/v1/orders
+Content-Type: application/json
+Accept: application/json
+
+{
+  "tableNumber": 1,
+  "waiterId": "{{waiterId}}"
+}
+
+###
+
+POST {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "productId": "{{productId}}",
+  "productType": "Dish",
+  "quantity": 2,
+  "notes": "Sin sal"
+}
+
+###
+
+PATCH {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/status
+Content-Type: application/json
+Accept: application/json
+
+{
+  "newStatus": "InProgress",
+  "changedByUserId": "{{userId}}"
+}
+
+###
+
+PATCH {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/items/{{itemId}}/status
+Content-Type: application/json
+Accept: application/json
+
+{
+  "newStatus": "SentToKitchen"
+}
+
+###
+
+POST {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/notes
+Content-Type: application/json
+Accept: application/json
+
+{
+  "createdByUserId": "{{userId}}",
+  "note": "El cliente pidio prioridad."
+}
+
+###
+
+DELETE {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/items/{{itemId}}
+Accept: application/json
+
+###

@@ -8,7 +8,7 @@ using OrderService.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace Infrastructure.Migrations
+namespace OrderService.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
@@ -34,10 +34,8 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                    b.Property<int>("StatusId")
+                        .HasColumnType("int");
 
                     b.Property<int>("TableNumber")
                         .HasColumnType("int");
@@ -59,7 +57,7 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("StatusId");
 
                     b.HasIndex("TableNumber");
 
@@ -74,6 +72,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("DurationMinutesSnapshot")
+                        .HasColumnType("int");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
@@ -104,10 +105,8 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime?>("SentToKitchenAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                    b.Property<int>("StatusId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("UnitPriceSnapshot")
                         .HasColumnType("decimal(18,2)");
@@ -119,7 +118,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("StatusId");
 
                     b.ToTable("OrderItems", (string)null);
                 });
@@ -163,23 +162,120 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("ChangedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("NewStatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                    b.Property<int>("NewStatusId")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("PreviousStatus")
+                    b.Property<int?>("PreviousStatusId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NewStatusId");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("PreviousStatusId");
+
+                    b.ToTable("OrderStatusHistories", (string)null);
+                });
+
+            modelBuilder.Entity("OrderService.Domain.Entities.Status", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("Name", "Type")
+                        .IsUnique();
 
-                    b.ToTable("OrderStatusHistories", (string)null);
+                    b.ToTable("Statuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Open",
+                            Type = "Order"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "InProgress",
+                            Type = "Order"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "ReadyToClose",
+                            Type = "Order"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Closed",
+                            Type = "Order"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Cancelled",
+                            Type = "Order"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "Pending",
+                            Type = "OrderItem"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "SentToKitchen",
+                            Type = "OrderItem"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Name = "Ready",
+                            Type = "OrderItem"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Name = "Delivered",
+                            Type = "OrderItem"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Name = "Cancelled",
+                            Type = "OrderItem"
+                        });
+                });
+
+            modelBuilder.Entity("OrderService.Domain.Entities.Order", b =>
+                {
+                    b.HasOne("OrderService.Domain.Entities.Status", "Status")
+                        .WithMany()
+                        .HasForeignKey("StatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Status");
                 });
 
             modelBuilder.Entity("OrderService.Domain.Entities.OrderItem", b =>
@@ -190,7 +286,15 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("OrderService.Domain.Entities.Status", "Status")
+                        .WithMany()
+                        .HasForeignKey("StatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Order");
+
+                    b.Navigation("Status");
                 });
 
             modelBuilder.Entity("OrderService.Domain.Entities.OrderNote", b =>
@@ -206,13 +310,28 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("OrderService.Domain.Entities.OrderStatusHistory", b =>
                 {
+                    b.HasOne("OrderService.Domain.Entities.Status", "NewStatus")
+                        .WithMany()
+                        .HasForeignKey("NewStatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("OrderService.Domain.Entities.Order", "Order")
                         .WithMany("StatusHistory")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("OrderService.Domain.Entities.Status", "PreviousStatus")
+                        .WithMany()
+                        .HasForeignKey("PreviousStatusId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("NewStatus");
+
                     b.Navigation("Order");
+
+                    b.Navigation("PreviousStatus");
                 });
 
             modelBuilder.Entity("OrderService.Domain.Entities.Order", b =>
