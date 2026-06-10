@@ -60,6 +60,7 @@ builder.Services.AddScoped<IGetOrderStatusesQueryHandler, GetOrderStatusesQueryH
 builder.Services.AddScoped<IGetOrderItemStatusesQueryHandler, GetOrderItemStatusesQueryHandler>();
 builder.Services.AddScoped<ITableRepository, TableRepository>();
 builder.Services.AddScoped<IGetAllTablesQueryHandler, GetAllTablesQueryHandler>();
+builder.Services.AddScoped<IGetOrderByIdQueryHandler, GetOrderByIdQueryHandler>();
 builder.Services.AddScoped<IGetTableByIdQueryHandler, GetTableByIdQueryHandler>();
 builder.Services.AddScoped<ICreateTableCommandHandler, CreateTableCommandHandler>();
 builder.Services.AddScoped<IToggleTableStatusCommandHandler, ToggleTableStatusCommandHandler>();
