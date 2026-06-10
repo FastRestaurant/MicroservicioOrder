@@ -26,9 +26,9 @@ public class OrdersController : ControllerBase
     private readonly IChangeOrderStatusCommandHandler _changeStatusHandler;
     private readonly IAddNoteToOrderCommandHandler _addNoteHandler;
     private readonly IUpdateItemStatusCommandHandler _updateItemStatusHandler;
-    private readonly IGetOrderByIdQueryHandler _getByIdHandler;
     private readonly IGetAllOrdersQueryHandler _getAllHandler;
     private readonly IGetOrdersByStatusQueryHandler _getByStatusHandler;
+    private readonly IGetOrderByIdQueryHandler _getByIdHandler;
     private readonly IGetOrdersByTableQueryHandler _getByTableHandler;
     private readonly IGetOrderStatusesQueryHandler _getOrderStatusesHandler;
     private readonly IGetOrderItemStatusesQueryHandler _getOrderItemStatusesHandler;
@@ -40,9 +40,9 @@ public class OrdersController : ControllerBase
         IChangeOrderStatusCommandHandler changeStatusHandler,
         IAddNoteToOrderCommandHandler addNoteHandler,
         IUpdateItemStatusCommandHandler updateItemStatusHandler,
-        IGetOrderByIdQueryHandler getByIdHandler,
         IGetAllOrdersQueryHandler getAllHandler,
         IGetOrdersByStatusQueryHandler getByStatusHandler,
+        IGetOrderByIdQueryHandler getByIdHandler,
         IGetOrdersByTableQueryHandler getByTableHandler,
         IGetOrderStatusesQueryHandler getOrderStatusesHandler,
         IGetOrderItemStatusesQueryHandler getOrderItemStatusesHandler)
@@ -53,9 +53,9 @@ public class OrdersController : ControllerBase
         _changeStatusHandler = changeStatusHandler;
         _addNoteHandler = addNoteHandler;
         _updateItemStatusHandler = updateItemStatusHandler;
-        _getByIdHandler = getByIdHandler;
         _getAllHandler = getAllHandler;
         _getByStatusHandler = getByStatusHandler;
+        _getByIdHandler = getByIdHandler;
         _getByTableHandler = getByTableHandler;
         _getOrderStatusesHandler = getOrderStatusesHandler;
         _getOrderItemStatusesHandler = getOrderItemStatusesHandler;
@@ -89,11 +89,10 @@ public class OrdersController : ControllerBase
     public async Task<ActionResult<IEnumerable<OrderSummaryDto>>> GetByStatus(string status, CancellationToken ct)
         => Ok(await _getByStatusHandler.Handle(new GetOrdersByStatusQuery { Status = status }, ct));
 
-    [HttpGet("table/{tableNumber:int}")]
+    [HttpGet("table/{tableId:guid}")]
     [ProducesResponseType(typeof(IEnumerable<OrderSummaryDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<OrderSummaryDto>>> GetByTable(int tableNumber, CancellationToken ct)
-        => Ok(await _getByTableHandler.Handle(new GetOrdersByTableQuery { TableNumber = tableNumber }, ct));
-
+    public async Task<ActionResult<IEnumerable<OrderSummaryDto>>> GetByTable(Guid tableId, CancellationToken ct)
+     => Ok(await _getByTableHandler.Handle(new GetOrdersByTableQuery { TableId = tableId }, ct));
     [HttpPost]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]

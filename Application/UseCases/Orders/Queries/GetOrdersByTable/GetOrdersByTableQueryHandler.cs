@@ -13,23 +13,22 @@ public sealed class GetOrdersByTableQueryHandler : IGetOrdersByTableQueryHandler
         _orderRepository = orderRepository;
     }
 
-    public async Task<IEnumerable<OrderSummaryDto>> Handle(GetOrdersByTableQuery query, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<OrderSummaryDto>> Handle(
+        GetOrdersByTableQuery query, CancellationToken cancellationToken = default)
     {
-        var orders = await _orderRepository.GetByTableAsync(query.TableNumber, cancellationToken);
+        var orders = await _orderRepository.GetByTableAsync(query.TableId, cancellationToken);
         return orders.Select(MapOrder);
     }
 
-    private static OrderSummaryDto MapOrder(Order order)
+    private static OrderSummaryDto MapOrder(Order order) => new()
     {
-        return new OrderSummaryDto
-        {
-            Id = order.Id,
-            TableNumber = order.TableNumber,
-            WaiterId = order.WaiterId,
-            Status = order.Status.Name,
-            Total = order.Total,
-            CreatedAt = order.CreatedAt,
-            ItemCount = order.Items.Count
-        };
-    }
+        Id = order.Id,
+        TableId = order.TableId,
+        TableNumber = order.Table.Number,
+        WaiterId = order.WaiterId,
+        Status = order.Status.Name,
+        Total = order.Total,
+        CreatedAt = order.CreatedAt,
+        ItemCount = order.Items.Count
+    };
 }

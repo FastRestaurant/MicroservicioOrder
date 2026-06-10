@@ -8,23 +8,26 @@ namespace OrderService.Application.UseCases.Orders.Commands.CreateOrder;
 public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
 {
     private readonly IOrderRepository _orderRepository;
+    private readonly ITableRepository _tableRepository;
     private readonly IUserServiceClient _userServiceClient;
     private readonly IUnitOfWork _unitOfWork;
 
     public CreateOrderCommandHandler(
         IOrderRepository orderRepository,
+        ITableRepository tableRepository,
         IUserServiceClient userServiceClient,
         IUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
+        _tableRepository = tableRepository;
         _userServiceClient = userServiceClient;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<OrderResponseDto> Handle(CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
-        if (command.TableNumber <= 0)
-            throw new ValidationException("La mesa debe ser mayor a cero.");
+        if (command.TableId == Guid.Empty)
+            throw new ValidationException("El id de la mesa es obligatorio.");
 
         if (command.WaiterId == Guid.Empty)
             throw new ValidationException("El id del mozo es obligatorio.");
@@ -33,12 +36,17 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         if (!waiterExists)
             throw new NotFoundException("User", command.WaiterId);
 
-        var tableOccupied = await _orderRepository.HasActiveOrderForTableAsync(command.TableNumber, cancellationToken);
-        if (tableOccupied)
-            throw new DomainException(
-                $"La mesa {command.TableNumber} ya tiene una orden activa. Cierrela antes de abrir una nueva.");
+        var table = await _tableRepository.GetByIdAsync(command.TableId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Table), command.TableId);
 
-        var order = Order.Create(command.TableNumber, command.WaiterId);
+        if (!table.Status)
+            throw new DomainException($"La mesa '{table.Number}' está deshabilitada.");
+
+        var tableOccupied = await _orderRepository.HasActiveOrderForTableAsync(command.TableId, cancellationToken);
+        if (tableOccupied)
+            throw new DomainException($"La mesa '{table.Number}' ya tiene una orden activa. Ciérrela antes de abrir una nueva.");
+
+        var order = Order.Create(command.TableId, command.WaiterId);
         await _orderRepository.AddAsync(order, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -53,7 +61,8 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         return new OrderResponseDto
         {
             Id = order.Id,
-            TableNumber = order.TableNumber,
+            TableId = order.TableId,
+            TableNumber = order.Table.Number,
             WaiterId = order.WaiterId,
             Status = order.Status.Name,
             Total = order.Total,
@@ -67,44 +76,35 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         };
     }
 
-    private static OrderItemResponseDto MapItem(OrderItem item)
+    private static OrderItemResponseDto MapItem(OrderItem item) => new()
     {
-        return new OrderItemResponseDto
-        {
-            Id = item.Id,
-            ProductId = item.ProductId,
-            ProductType = item.ProductType,
-            ProductNameSnapshot = item.ProductNameSnapshot,
-            UnitPriceSnapshot = item.UnitPriceSnapshot,
-            DurationMinutesSnapshot = item.DurationMinutesSnapshot,
-            Quantity = item.Quantity,
-            Status = item.Status.Name,
-            Notes = item.Notes,
-            SentToKitchenAt = item.SentToKitchenAt,
-            ReadyAt = item.ReadyAt
-        };
-    }
+        Id = item.Id,
+        ProductId = item.ProductId,
+        ProductType = item.ProductType,
+        ProductNameSnapshot = item.ProductNameSnapshot,
+        UnitPriceSnapshot = item.UnitPriceSnapshot,
+        DurationMinutesSnapshot = item.DurationMinutesSnapshot,
+        Quantity = item.Quantity,
+        Status = item.Status.Name,
+        Notes = item.Notes,
+        SentToKitchenAt = item.SentToKitchenAt,
+        ReadyAt = item.ReadyAt
+    };
 
-    private static OrderNoteResponseDto MapNote(OrderNote note)
+    private static OrderNoteResponseDto MapNote(OrderNote note) => new()
     {
-        return new OrderNoteResponseDto
-        {
-            Id = note.Id,
-            CreatedByUserId = note.CreatedByUserId,
-            Note = note.Note,
-            CreatedAt = note.CreatedAt
-        };
-    }
+        Id = note.Id,
+        CreatedByUserId = note.CreatedByUserId,
+        Note = note.Note,
+        CreatedAt = note.CreatedAt
+    };
 
-    private static OrderStatusHistoryDto MapStatusHistory(OrderStatusHistory history)
+    private static OrderStatusHistoryDto MapStatusHistory(OrderStatusHistory history) => new()
     {
-        return new OrderStatusHistoryDto
-        {
-            Id = history.Id,
-            PreviousStatusName = history.PreviousStatus?.Name,
-            NewStatus = history.NewStatus.Name,
-            ChangedByUserId = history.ChangedByUserId,
-            ChangedAt = history.ChangedAt
-        };
-    }
+        Id = history.Id,
+        PreviousStatusName = history.PreviousStatus?.Name,
+        NewStatus = history.NewStatus.Name,
+        ChangedByUserId = history.ChangedByUserId,
+        ChangedAt = history.ChangedAt
+    };
 }

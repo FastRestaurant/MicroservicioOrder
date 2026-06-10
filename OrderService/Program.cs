@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.UseCases.Orders.Commands.AddItemToOrder;
@@ -11,12 +11,16 @@ using OrderService.Application.UseCases.Orders.Commands.UpdateItemStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetAllOrders;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderById;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderItemStatuses;
-using OrderService.Application.UseCases.Orders.Queries.GetOrderStatuses;
 using OrderService.Application.UseCases.Orders.Queries.GetOrdersByStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetOrdersByTable;
+using OrderService.Application.UseCases.Orders.Queries.GetOrderStatuses;
+using OrderService.Application.UseCases.Tables.Commands.CreateTable;
+using OrderService.Application.UseCases.Tables.Commands.ToggleTableStatus;
+using OrderService.Application.UseCases.Tables.Queries.GetAllTables;
+using OrderService.Application.UseCases.Tables.Queries.GetTableById;
+using OrderService.Infrastructure.Persistence.Repositories;
 using OrderService.Infrastructure.ExternalServices;
 using OrderService.Infrastructure.Persistence;
-using OrderService.Infrastructure.Persistence.Repositories;
 using OrderService.Presentation.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -49,12 +53,16 @@ builder.Services.AddScoped<IRemoveItemFromOrderCommandHandler, RemoveItemFromOrd
 builder.Services.AddScoped<IChangeOrderStatusCommandHandler, ChangeOrderStatusCommandHandler>();
 builder.Services.AddScoped<IAddNoteToOrderCommandHandler, AddNoteToOrderCommandHandler>();
 builder.Services.AddScoped<IUpdateItemStatusCommandHandler, UpdateItemStatusCommandHandler>();
-builder.Services.AddScoped<IGetOrderByIdQueryHandler, GetOrderByIdQueryHandler>();
 builder.Services.AddScoped<IGetAllOrdersQueryHandler, GetAllOrdersQueryHandler>();
 builder.Services.AddScoped<IGetOrdersByStatusQueryHandler, GetOrdersByStatusQueryHandler>();
 builder.Services.AddScoped<IGetOrdersByTableQueryHandler, GetOrdersByTableQueryHandler>();
 builder.Services.AddScoped<IGetOrderStatusesQueryHandler, GetOrderStatusesQueryHandler>();
 builder.Services.AddScoped<IGetOrderItemStatusesQueryHandler, GetOrderItemStatusesQueryHandler>();
+builder.Services.AddScoped<ITableRepository, TableRepository>();
+builder.Services.AddScoped<IGetAllTablesQueryHandler, GetAllTablesQueryHandler>();
+builder.Services.AddScoped<IGetTableByIdQueryHandler, GetTableByIdQueryHandler>();
+builder.Services.AddScoped<ICreateTableCommandHandler, CreateTableCommandHandler>();
+builder.Services.AddScoped<IToggleTableStatusCommandHandler, ToggleTableStatusCommandHandler>();
 
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>

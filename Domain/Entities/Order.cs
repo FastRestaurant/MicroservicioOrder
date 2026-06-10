@@ -6,7 +6,7 @@ namespace OrderService.Domain.Entities;
 public class Order
 {
     public Guid Id { get; private set; }
-    public int TableNumber { get; private set; }
+    public Guid TableId { get; private set; }
     public Guid WaiterId { get; private set; }
     public int StatusId { get; private set; } = OrderStatusIds.Open;
     public decimal Total { get; private set; }
@@ -16,6 +16,7 @@ public class Order
     public byte[] Version { get; private set; } = [];
 
     public Status Status { get; private set; } = null!;
+    public Table Table { get; private set; } = null!;
 
     public ICollection<OrderItem> Items { get; private set; } = new List<OrderItem>();
     public ICollection<OrderNote> Notes { get; private set; } = new List<OrderNote>();
@@ -23,12 +24,12 @@ public class Order
 
     private Order() { }
 
-    public static Order Create(int tableNumber, Guid waiterId)
+    public static Order Create(Guid tableId, Guid waiterId)
     {
         return new Order
         {
             Id = Guid.NewGuid(),
-            TableNumber = tableNumber,
+            TableId = tableId,
             WaiterId = waiterId,
             StatusId = OrderStatusIds.Open,
             Total = 0,
@@ -80,7 +81,6 @@ public class Order
 
         return history;
     }
-
 
     public OrderNote AddNote(Guid createdByUserId, string noteText)
     {
