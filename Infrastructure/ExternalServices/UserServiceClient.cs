@@ -15,7 +15,7 @@ public sealed class UserServiceClient : IUserServiceClient
     public async Task<bool> ExistsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         if (_httpClient.BaseAddress is null)
-            return false;
+            return true;
 
         var response = await _httpClient.GetAsync($"api/v1/users/{userId}", cancellationToken);
 
