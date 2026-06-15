@@ -24,16 +24,38 @@ public sealed class TableRepository : ITableRepository
     public async Task<IReadOnlyCollection<Table>> GetAllAsync(CancellationToken cancellationToken = default)
         => await _context.Tables
             .AsNoTracking()
-            .OrderBy(t => t.Number)
+            .OrderBy(t => t.Number.Length)
+            .ThenBy(t => t.Number)
             .ToListAsync(cancellationToken);
+
+    public async Task<(IReadOnlyCollection<Table> Tables, int TotalCount)> GetPagedAsync(
+        int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = _context.Tables
+            .AsNoTracking()
+            .OrderBy(t => t.Number.Length)
+            .ThenBy(t => t.Number);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var tables = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (tables, totalCount);
+    }
 
     public async Task<IReadOnlyCollection<Table>> GetAvailableAsync(CancellationToken cancellationToken = default)
         => await _context.Tables
             .AsNoTracking()
-            .Where(t => t.Status)
-            .OrderBy(t => t.Number)
+            .Where(t => t.IsEnabled)
+            .OrderBy(t => t.Number.Length)
+            .ThenBy(t => t.Number)
             .ToListAsync(cancellationToken);
 
     public async Task AddAsync(Table table, CancellationToken cancellationToken = default)
         => await _context.Tables.AddAsync(table, cancellationToken);
+
+    public void Remove(Table table)
+        => _context.Tables.Remove(table);
 }

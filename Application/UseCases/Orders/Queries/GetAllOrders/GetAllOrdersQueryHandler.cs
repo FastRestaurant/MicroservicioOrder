@@ -18,10 +18,10 @@ public sealed class GetAllOrdersQueryHandler : IGetAllOrdersQueryHandler
     public async Task<PagedResponseDto<OrderSummaryDto>> Handle(GetAllOrdersQuery query, CancellationToken cancellationToken = default)
     {
         if (query.Page < 1)
-            throw new ValidationException("El numero de pagina debe ser mayor a cero.");
+            throw new ValidationException("El número de página debe ser mayor a cero.");
 
         if (query.PageSize < 1 || query.PageSize > MaxPageSize)
-            throw new ValidationException($"El tamanio de pagina debe estar entre 1 y {MaxPageSize}.");
+            throw new ValidationException($"El tamaño de página debe estar entre 1 y {MaxPageSize}.");
 
         var (orders, totalCount) = await _orderRepository.GetPagedAsync(query.Page, query.PageSize, cancellationToken);
         var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)query.PageSize);

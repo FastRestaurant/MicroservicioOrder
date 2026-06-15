@@ -5,5 +5,5 @@ namespace OrderService.Application.Interfaces;
 
 public interface IGetAllTablesQueryHandler
 {
-    Task<IReadOnlyCollection<TableResponseDto>> Handle(GetAllTablesQuery query, CancellationToken cancellationToken = default);
+    Task<PagedResponseDto<TableResponseDto>> Handle(GetAllTablesQuery query, CancellationToken cancellationToken = default);
 }

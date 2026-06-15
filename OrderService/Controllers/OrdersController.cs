@@ -91,16 +91,29 @@ public class OrdersController : ControllerBase
 
     [HttpGet("status/{status}")]
     [Authorize(Roles = "Admin,Waitress,Kitchen")]
-    [ProducesResponseType(typeof(IEnumerable<OrderSummaryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PagedResponseDto<OrderSummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<IEnumerable<OrderSummaryDto>>> GetByStatus(string status, CancellationToken ct)
-        => Ok(await _getByStatusHandler.Handle(new GetOrdersByStatusQuery { Status = status }, ct));
+    public async Task<ActionResult<PagedResponseDto<OrderSummaryDto>>> GetByStatus(
+        string status, [FromQuery] GetOrdersByStatusQuery query, CancellationToken ct)
+        => Ok(await _getByStatusHandler.Handle(new GetOrdersByStatusQuery
+        {
+            Status = status,
+            Page = query.Page,
+            PageSize = query.PageSize
+        }, ct));
 
     [HttpGet("table/{tableId:guid}")]
     [Authorize(Roles = "Admin,Waitress")]
-    [ProducesResponseType(typeof(IEnumerable<OrderSummaryDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<OrderSummaryDto>>> GetByTable(Guid tableId, CancellationToken ct)
-     => Ok(await _getByTableHandler.Handle(new GetOrdersByTableQuery { TableId = tableId }, ct));
+    [ProducesResponseType(typeof(PagedResponseDto<OrderSummaryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResponseDto<OrderSummaryDto>>> GetByTable(
+        Guid tableId, [FromQuery] GetOrdersByTableQuery query, CancellationToken ct)
+     => Ok(await _getByTableHandler.Handle(new GetOrdersByTableQuery
+     {
+         TableId = tableId,
+         Page = query.Page,
+         PageSize = query.PageSize
+     }, ct));
     [HttpPost]
     [Authorize(Roles = "Admin,Waitress")]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status201Created)]

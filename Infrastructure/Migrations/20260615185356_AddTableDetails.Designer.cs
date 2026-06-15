@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OrderService.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using OrderService.Infrastructure.Persistence;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260615185356_AddTableDetails")]
+    partial class AddTableDetails
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,11 +63,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("StatusId");
 
                     b.HasIndex("TableId");
-
-                    b.HasIndex("TableId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Orders_Active_TableId")
-                        .HasFilter("[StatusId] IN (1, 2, 3)");
 
                     b.ToTable("Orders", (string)null);
                 });

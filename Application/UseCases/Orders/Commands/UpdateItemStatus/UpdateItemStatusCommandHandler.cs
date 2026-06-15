@@ -42,8 +42,18 @@ public sealed class UpdateItemStatusCommandHandler : IUpdateItemStatusCommandHan
         var item = order.Items.FirstOrDefault(i => i.Id == command.ItemId)
             ?? throw new NotFoundException(nameof(OrderItem), command.ItemId);
 
-        item.UpdateStatus(newStatus.Id);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            item.UpdateStatus(newStatus.Id);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
 
         var updatedOrder = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);

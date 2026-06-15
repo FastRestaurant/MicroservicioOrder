@@ -39,21 +39,31 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         var table = await _tableRepository.GetByIdAsync(command.TableId, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.TableId);
 
-        if (!table.Status)
+        if (!table.IsEnabled)
             throw new DomainException($"La mesa '{table.Number}' está deshabilitada.");
 
         var tableOccupied = await _orderRepository.HasActiveOrderForTableAsync(command.TableId, cancellationToken);
         if (tableOccupied)
-            throw new DomainException($"La mesa '{table.Number}' ya tiene una orden activa. Ciérrela antes de abrir una nueva.");
+            throw new ConflictException($"La mesa '{table.Number}' ya tiene una orden activa. Ciérrela antes de abrir una nueva.");
 
-        var order = Order.Create(command.TableId, command.WaiterId);
-        await _orderRepository.AddAsync(order, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var order = Order.Create(command.TableId, command.WaiterId);
+            await _orderRepository.AddAsync(order, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-        var createdOrder = await _orderRepository.GetByIdWithDetailsAsync(order.Id, cancellationToken)
-            ?? throw new NotFoundException(nameof(Order), order.Id);
+            var createdOrder = await _orderRepository.GetByIdWithDetailsAsync(order.Id, cancellationToken)
+                ?? throw new NotFoundException(nameof(Order), order.Id);
 
-        return MapOrder(createdOrder);
+            return MapOrder(createdOrder);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
     }
 
     private static OrderResponseDto MapOrder(Order order)

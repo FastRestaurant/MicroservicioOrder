@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.UseCases.Tables.Commands.CreateTable;
+using OrderService.Application.UseCases.Tables.Commands.DeleteTable;
 using OrderService.Application.UseCases.Tables.Commands.ToggleTableStatus;
+using OrderService.Application.UseCases.Tables.Commands.UpdateTable;
 using OrderService.Application.UseCases.Tables.Queries.GetAllTables;
 using OrderService.Application.UseCases.Tables.Queries.GetTableById;
 
@@ -17,24 +19,31 @@ public class TablesController : ControllerBase
     private readonly IGetAllTablesQueryHandler _getAllHandler;
     private readonly IGetTableByIdQueryHandler _getByIdHandler;
     private readonly ICreateTableCommandHandler _createHandler;
+    private readonly IDeleteTableCommandHandler _deleteHandler;
+    private readonly IUpdateTableCommandHandler _updateHandler;
     private readonly IToggleTableStatusCommandHandler _toggleHandler;
 
     public TablesController(
         IGetAllTablesQueryHandler getAllHandler,
         IGetTableByIdQueryHandler getByIdHandler,
         ICreateTableCommandHandler createHandler,
+        IDeleteTableCommandHandler deleteHandler,
+        IUpdateTableCommandHandler updateHandler,
         IToggleTableStatusCommandHandler toggleHandler)
     {
         _getAllHandler = getAllHandler;
         _getByIdHandler = getByIdHandler;
         _createHandler = createHandler;
+        _deleteHandler = deleteHandler;
+        _updateHandler = updateHandler;
         _toggleHandler = toggleHandler;
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyCollection<TableResponseDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyCollection<TableResponseDto>>> GetAll(CancellationToken ct)
-        => Ok(await _getAllHandler.Handle(new GetAllTablesQuery(), ct));
+    [ProducesResponseType(typeof(PagedResponseDto<TableResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResponseDto<TableResponseDto>>> GetAll([FromQuery] GetAllTablesQuery query, CancellationToken ct)
+        => Ok(await _getAllHandler.Handle(query, ct));
 
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status200OK)]
@@ -43,7 +52,7 @@ public class TablesController : ControllerBase
         => Ok(await _getByIdHandler.Handle(new GetTableByIdQuery { Id = id }, ct));
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,ADMIN")]
     [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TableResponseDto>> Create([FromBody] CreateTableCommand cmd, CancellationToken ct)
@@ -52,8 +61,34 @@ public class TablesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
+    [HttpPatch("{id:guid}")]
+    [Authorize(Roles = "Admin,ADMIN")]
+    [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TableResponseDto>> Update(Guid id, [FromBody] UpdateTableRequest req, CancellationToken ct)
+        => Ok(await _updateHandler.Handle(new UpdateTableCommand
+        {
+            Id = id,
+            Number = req.Number,
+            SeatCount = req.SeatCount,
+            Location = req.Location,
+            IsEnabled = req.IsEnabled
+        }, ct));
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,ADMIN")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await _deleteHandler.Handle(new DeleteTableCommand { Id = id }, ct);
+        return NoContent();
+    }
+
     [HttpPatch("{id:guid}/status")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,ADMIN")]
     [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TableResponseDto>> ToggleStatus(
@@ -65,4 +100,12 @@ public class TablesController : ControllerBase
 public sealed class ToggleTableStatusRequest
 {
     public bool Enable { get; init; }
+}
+
+public sealed class UpdateTableRequest
+{
+    public string Number { get; init; } = string.Empty;
+    public int SeatCount { get; init; }
+    public string Location { get; init; } = string.Empty;
+    public bool IsEnabled { get; init; }
 }

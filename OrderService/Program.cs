@@ -18,7 +18,9 @@ using OrderService.Application.UseCases.Orders.Queries.GetOrdersByStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetOrdersByTable;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderStatuses;
 using OrderService.Application.UseCases.Tables.Commands.CreateTable;
+using OrderService.Application.UseCases.Tables.Commands.DeleteTable;
 using OrderService.Application.UseCases.Tables.Commands.ToggleTableStatus;
+using OrderService.Application.UseCases.Tables.Commands.UpdateTable;
 using OrderService.Application.UseCases.Tables.Queries.GetAllTables;
 using OrderService.Application.UseCases.Tables.Queries.GetTableById;
 using OrderService.Infrastructure.Persistence.Repositories;
@@ -68,6 +70,8 @@ builder.Services.AddScoped<IGetAllTablesQueryHandler, GetAllTablesQueryHandler>(
 builder.Services.AddScoped<IGetOrderByIdQueryHandler, GetOrderByIdQueryHandler>();
 builder.Services.AddScoped<IGetTableByIdQueryHandler, GetTableByIdQueryHandler>();
 builder.Services.AddScoped<ICreateTableCommandHandler, CreateTableCommandHandler>();
+builder.Services.AddScoped<IDeleteTableCommandHandler, DeleteTableCommandHandler>();
+builder.Services.AddScoped<IUpdateTableCommandHandler, UpdateTableCommandHandler>();
 builder.Services.AddScoped<IToggleTableStatusCommandHandler, ToggleTableStatusCommandHandler>();
 
 builder.Services.AddControllers()

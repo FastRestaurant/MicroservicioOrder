@@ -24,7 +24,9 @@ public class AppDbContext : DbContext
             e.HasKey(t => t.Id);
             e.Property(t => t.Id).HasColumnType("uniqueidentifier");
             e.Property(t => t.Number).HasMaxLength(20).IsRequired();
-            e.Property(t => t.Status).IsRequired();
+            e.Property(t => t.SeatCount).IsRequired();
+            e.Property(t => t.Location).HasMaxLength(80).IsRequired();
+            e.Property(t => t.IsEnabled).IsRequired();
             e.HasIndex(t => t.Number).IsUnique();
         });
 
@@ -90,6 +92,10 @@ public class AppDbContext : DbContext
 
             e.HasIndex(o => o.StatusId);
             e.HasIndex(o => o.TableId);
+            e.HasIndex(o => o.TableId)
+             .IsUnique()
+             .HasDatabaseName("UX_Orders_Active_TableId")
+             .HasFilter("[StatusId] IN (1, 2, 3)");
         });
 
         modelBuilder.Entity<OrderItem>(e =>

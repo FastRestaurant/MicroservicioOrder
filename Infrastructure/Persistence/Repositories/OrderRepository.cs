@@ -46,25 +46,45 @@ public class OrderRepository : IOrderRepository
         return (orders, totalCount);
     }
 
-    public async Task<IEnumerable<Order>> GetByStatusAsync(int statusId, CancellationToken ct = default)
-        => await _context.Orders
+    public async Task<(IReadOnlyCollection<Order> Orders, int TotalCount)> GetPagedByStatusAsync(
+        int statusId, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = _context.Orders
             .AsNoTracking()
             .Include(o => o.Table)
             .Include(o => o.Status)
             .Include(o => o.Items)
             .Where(o => o.StatusId == statusId)
-            .OrderByDescending(o => o.CreatedAt)
+            .OrderByDescending(o => o.CreatedAt);
+
+        var totalCount = await query.CountAsync(ct);
+        var orders = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
-    public async Task<IEnumerable<Order>> GetByTableAsync(Guid tableId, CancellationToken ct = default)
-        => await _context.Orders
+        return (orders, totalCount);
+    }
+
+    public async Task<(IReadOnlyCollection<Order> Orders, int TotalCount)> GetPagedByTableAsync(
+        Guid tableId, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = _context.Orders
             .AsNoTracking()
             .Include(o => o.Table)
             .Include(o => o.Status)
             .Include(o => o.Items)
             .Where(o => o.TableId == tableId)
-            .OrderByDescending(o => o.CreatedAt)
+            .OrderByDescending(o => o.CreatedAt);
+
+        var totalCount = await query.CountAsync(ct);
+        var orders = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
+
+        return (orders, totalCount);
+    }
 
     public async Task AddAsync(Order order, CancellationToken ct = default)
         => await _context.Orders.AddAsync(order, ct);
@@ -82,4 +102,34 @@ public class OrderRepository : IOrderRepository
             .AnyAsync(o => o.TableId == tableId
                         && activeStatuses.Contains(o.StatusId), ct);
     }
+
+    public async Task<IReadOnlyDictionary<Guid, string>> GetActiveStatusNamesByTableIdsAsync(
+        IEnumerable<Guid> tableIds, CancellationToken ct = default)
+    {
+        var ids = tableIds.Distinct().ToArray();
+        if (ids.Length == 0)
+            return new Dictionary<Guid, string>();
+
+        var activeStatuses = new[]
+        {
+            OrderStatusIds.Open,
+            OrderStatusIds.InProgress,
+            OrderStatusIds.ReadyToClose
+        };
+
+        var activeOrders = await _context.Orders
+            .AsNoTracking()
+            .Include(o => o.Status)
+            .Where(o => ids.Contains(o.TableId) && activeStatuses.Contains(o.StatusId))
+            .OrderByDescending(o => o.CreatedAt)
+            .Select(o => new { o.TableId, StatusName = o.Status.Name })
+            .ToListAsync(ct);
+
+        return activeOrders
+            .GroupBy(order => order.TableId)
+            .ToDictionary(group => group.Key, group => group.First().StatusName);
+    }
+
+    public async Task<bool> HasAnyOrderForTableAsync(Guid tableId, CancellationToken ct = default)
+        => await _context.Orders.AnyAsync(o => o.TableId == tableId, ct);
 }
