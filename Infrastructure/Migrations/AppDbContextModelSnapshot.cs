@@ -8,7 +8,7 @@ using OrderService.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace OrderService.Infrastructure.Migrations
+namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
@@ -37,8 +37,8 @@ namespace OrderService.Infrastructure.Migrations
                     b.Property<int>("StatusId")
                         .HasColumnType("int");
 
-                    b.Property<int>("TableNumber")
-                        .HasColumnType("int");
+                    b.Property<Guid>("TableId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Total")
                         .HasColumnType("decimal(18,2)");
@@ -59,7 +59,7 @@ namespace OrderService.Infrastructure.Migrations
 
                     b.HasIndex("StatusId");
 
-                    b.HasIndex("TableNumber");
+                    b.HasIndex("TableId");
 
                     b.ToTable("Orders", (string)null);
                 });
@@ -267,6 +267,28 @@ namespace OrderService.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("OrderService.Domain.Entities.Table", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("Status")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.ToTable("Tables", (string)null);
+                });
+
             modelBuilder.Entity("OrderService.Domain.Entities.Order", b =>
                 {
                     b.HasOne("OrderService.Domain.Entities.Status", "Status")
@@ -275,7 +297,15 @@ namespace OrderService.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("OrderService.Domain.Entities.Table", "Table")
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Status");
+
+                    b.Navigation("Table");
                 });
 
             modelBuilder.Entity("OrderService.Domain.Entities.OrderItem", b =>

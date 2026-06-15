@@ -33,7 +33,8 @@ public sealed class GetOrdersByStatusQueryHandler : IGetOrdersByStatusQueryHandl
         return new OrderSummaryDto
         {
             Id = order.Id,
-            TableNumber = order.TableNumber,
+            TableId = order.TableId,
+            TableNumber = order.Table.Number,
             WaiterId = order.WaiterId,
             Status = order.Status.Name,
             Total = order.Total,

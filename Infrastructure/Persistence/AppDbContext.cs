@@ -7,30 +7,35 @@ namespace OrderService.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-    {
-    }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderNote> OrderNotes => Set<OrderNote>();
     public DbSet<OrderStatusHistory> OrderStatusHistories => Set<OrderStatusHistory>();
     public DbSet<Status> Statuses => Set<Status>();
+    public DbSet<Table> Tables => Set<Table>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Table>(e =>
+        {
+            e.ToTable("Tables");
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Id).HasColumnType("uniqueidentifier");
+            e.Property(t => t.Number).HasMaxLength(20).IsRequired();
+            e.Property(t => t.Status).IsRequired();
+            e.HasIndex(t => t.Number).IsUnique();
+        });
 
         modelBuilder.Entity<Status>(e =>
         {
             e.ToTable("Statuses");
             e.HasKey(s => s.Id);
-
             e.Property(s => s.Id).ValueGeneratedNever();
             e.Property(s => s.Name).HasMaxLength(50).IsRequired();
             e.Property(s => s.Type).HasMaxLength(30).IsRequired();
-
             e.HasIndex(s => new { s.Name, s.Type }).IsUnique();
-
             e.HasData(
                 new Status(OrderStatusIds.Open, "Open", StatusTypes.Order),
                 new Status(OrderStatusIds.InProgress, "InProgress", StatusTypes.Order),
@@ -48,18 +53,20 @@ public class AppDbContext : DbContext
         {
             e.ToTable("Orders");
             e.HasKey(o => o.Id);
-
             e.Property(o => o.Id).HasColumnType("uniqueidentifier");
-            e.Property(o => o.TableNumber).IsRequired();
+            e.Property(o => o.TableId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(o => o.WaiterId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(o => o.StatusId).IsRequired();
             e.Property(o => o.Total).HasColumnType("decimal(18,2)").IsRequired();
             e.Property(o => o.CreatedAt).IsRequired();
             e.Property(o => o.UpdatedAt).IsRequired();
             e.Property(o => o.ClosedAt);
+            e.Property(o => o.Version).IsRowVersion();
 
-            e.Property(o => o.Version)
-             .IsRowVersion();
+            e.HasOne(o => o.Table)
+             .WithMany()
+             .HasForeignKey(o => o.TableId)
+             .OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne(o => o.Status)
              .WithMany()
@@ -82,14 +89,13 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(o => o.StatusId);
-            e.HasIndex(o => o.TableNumber);
+            e.HasIndex(o => o.TableId);
         });
 
         modelBuilder.Entity<OrderItem>(e =>
         {
             e.ToTable("OrderItems");
             e.HasKey(i => i.Id);
-
             e.Property(i => i.Id).HasColumnType("uniqueidentifier");
             e.Property(i => i.OrderId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(i => i.ProductId).HasColumnType("uniqueidentifier").IsRequired();
@@ -118,22 +124,18 @@ public class AppDbContext : DbContext
         {
             e.ToTable("OrderNotes");
             e.HasKey(n => n.Id);
-
             e.Property(n => n.Id).HasColumnType("uniqueidentifier");
             e.Property(n => n.OrderId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(n => n.CreatedByUserId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(n => n.Note).HasMaxLength(1000).IsRequired();
             e.Property(n => n.CreatedAt).IsRequired();
-
             e.HasIndex(n => n.OrderId);
         });
-
 
         modelBuilder.Entity<OrderStatusHistory>(e =>
         {
             e.ToTable("OrderStatusHistories");
             e.HasKey(h => h.Id);
-
             e.Property(h => h.Id).HasColumnType("uniqueidentifier");
             e.Property(h => h.OrderId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(h => h.PreviousStatusId);
@@ -160,33 +162,27 @@ public class AppDbContext : DbContext
     private static void ConfigureUtcDateTimes(ModelBuilder modelBuilder)
     {
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
-            value => NormalizeToUtc(value),
-            value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+            v => NormalizeToUtc(v),
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
 
         var nullableDateTimeConverter = new ValueConverter<DateTime?, DateTime?>(
-            value => value.HasValue ? NormalizeToUtc(value.Value) : null,
-            value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null);
+            v => v.HasValue ? NormalizeToUtc(v.Value) : null,
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : null);
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-        {
             foreach (var property in entityType.GetProperties())
             {
                 if (property.ClrType == typeof(DateTime))
                     property.SetValueConverter(dateTimeConverter);
-
                 if (property.ClrType == typeof(DateTime?))
                     property.SetValueConverter(nullableDateTimeConverter);
             }
-        }
     }
 
-    private static DateTime NormalizeToUtc(DateTime value)
+    private static DateTime NormalizeToUtc(DateTime value) => value.Kind switch
     {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
-    }
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
 }

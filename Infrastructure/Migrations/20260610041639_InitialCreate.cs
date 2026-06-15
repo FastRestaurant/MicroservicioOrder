@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace OrderService.Infrastructure.Migrations
+namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -27,11 +27,24 @@ namespace OrderService.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Tables",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Number = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Status = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tables", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Orders",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TableNumber = table.Column<int>(type: "int", nullable: false),
+                    TableId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     WaiterId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     StatusId = table.Column<int>(type: "int", nullable: false),
                     Total = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -49,6 +62,12 @@ namespace OrderService.Infrastructure.Migrations
                         principalTable: "Statuses",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Orders_Tables_TableId",
+                        column: x => x.TableId,
+                        principalTable: "Tables",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -61,6 +80,7 @@ namespace OrderService.Infrastructure.Migrations
                     ProductType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     ProductNameSnapshot = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     UnitPriceSnapshot = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DurationMinutesSnapshot = table.Column<int>(type: "int", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     StatusId = table.Column<int>(type: "int", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
@@ -179,9 +199,9 @@ namespace OrderService.Infrastructure.Migrations
                 column: "StatusId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_TableNumber",
+                name: "IX_Orders_TableId",
                 table: "Orders",
-                column: "TableNumber");
+                column: "TableId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrderStatusHistories_NewStatusId",
@@ -203,6 +223,12 @@ namespace OrderService.Infrastructure.Migrations
                 table: "Statuses",
                 columns: new[] { "Name", "Type" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tables_Number",
+                table: "Tables",
+                column: "Number",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -222,6 +248,9 @@ namespace OrderService.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Statuses");
+
+            migrationBuilder.DropTable(
+                name: "Tables");
         }
     }
 }
