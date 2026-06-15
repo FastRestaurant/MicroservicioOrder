@@ -1,52 +1,59 @@
 @OrderService_HostAddress = http://localhost:5231
+@token = reemplazar_por_token_de_auth
 @orderId = 00000000-0000-0000-0000-000000000000
 @itemId = 00000000-0000-0000-0000-000000000000
-@waiterId = 00000000-0000-0000-0000-000000000000
-@userId = 00000000-0000-0000-0000-000000000000
+@tableId = 00000000-0000-0000-0000-000000000000
 @productId = 00000000-0000-0000-0000-000000000000
 
 GET {{OrderService_HostAddress}}/api/v1/orders?page=1&pageSize=10
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 
 GET {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 
 GET {{OrderService_HostAddress}}/api/v1/orders/status/Open
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 
-GET {{OrderService_HostAddress}}/api/v1/orders/table/1
+GET {{OrderService_HostAddress}}/api/v1/orders/table/{{tableId}}
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 
 GET {{OrderService_HostAddress}}/api/v1/orders/statuses
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 
 GET {{OrderService_HostAddress}}/api/v1/orders/item-statuses
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 
 POST {{OrderService_HostAddress}}/api/v1/orders
+Authorization: Bearer {{token}}
 Content-Type: application/json
 Accept: application/json
 
 {
-  "tableNumber": 1,
-  "waiterId": "{{waiterId}}"
+  "tableId": "{{tableId}}"
 }
 
 ###
 
 POST {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/items
+Authorization: Bearer {{token}}
 Content-Type: application/json
 Accept: application/json
 
@@ -60,17 +67,18 @@ Accept: application/json
 ###
 
 PATCH {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/status
+Authorization: Bearer {{token}}
 Content-Type: application/json
 Accept: application/json
 
 {
-  "newStatus": "InProgress",
-  "changedByUserId": "{{userId}}"
+  "newStatus": "InProgress"
 }
 
 ###
 
 PATCH {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/items/{{itemId}}/status
+Authorization: Bearer {{token}}
 Content-Type: application/json
 Accept: application/json
 
@@ -81,17 +89,52 @@ Accept: application/json
 ###
 
 POST {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/notes
+Authorization: Bearer {{token}}
 Content-Type: application/json
 Accept: application/json
 
 {
-  "createdByUserId": "{{userId}}",
   "note": "El cliente pidio prioridad."
 }
 
 ###
 
 DELETE {{OrderService_HostAddress}}/api/v1/orders/{{orderId}}/items/{{itemId}}
+Authorization: Bearer {{token}}
 Accept: application/json
+
+###
+
+GET {{OrderService_HostAddress}}/api/v1/tables
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+GET {{OrderService_HostAddress}}/api/v1/tables/{{tableId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+POST {{OrderService_HostAddress}}/api/v1/tables
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "number": "1"
+}
+
+###
+
+PATCH {{OrderService_HostAddress}}/api/v1/tables/{{tableId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "enable": true
+}
 
 ###

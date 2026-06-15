@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.UseCases.Tables.Commands.CreateTable;
@@ -10,6 +11,7 @@ namespace OrderService.Presentation.Controllers;
 
 [ApiController]
 [Route("api/v1/tables")]
+[Authorize]
 public class TablesController : ControllerBase
 {
     private readonly IGetAllTablesQueryHandler _getAllHandler;
@@ -41,6 +43,7 @@ public class TablesController : ControllerBase
         => Ok(await _getByIdHandler.Handle(new GetTableByIdQuery { Id = id }, ct));
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TableResponseDto>> Create([FromBody] CreateTableCommand cmd, CancellationToken ct)
@@ -50,6 +53,7 @@ public class TablesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TableResponseDto>> ToggleStatus(
