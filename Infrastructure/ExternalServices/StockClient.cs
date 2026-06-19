@@ -15,10 +15,10 @@ public sealed class StockClient : IStockClient
     }
 
     public Task<StockOperationResultDto> ConsumeForOrderAsync(StockConsumptionRequestDto request, CancellationToken cancellationToken = default)
-        => SendStockOperationAsync("api/v1/Stock/consume-for-order", request, cancellationToken);
+        => SendStockOperationAsync("api/v1/stocks/consumptions", request, cancellationToken);
 
     public Task<StockOperationResultDto> ReleaseForOrderAsync(StockReleaseRequestDto request, CancellationToken cancellationToken = default)
-        => SendStockOperationAsync("api/v1/Stock/release-for-order", request, cancellationToken);
+        => SendStockOperationAsync("api/v1/stocks/releases", request, cancellationToken);
 
     private async Task<StockOperationResultDto> SendStockOperationAsync<TRequest>(string path, TRequest request, CancellationToken cancellationToken)
     {
