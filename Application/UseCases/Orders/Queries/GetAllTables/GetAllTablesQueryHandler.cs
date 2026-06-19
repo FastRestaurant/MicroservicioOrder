@@ -30,8 +30,10 @@ public sealed class GetAllTablesQueryHandler : IGetAllTablesQueryHandler
         var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)query.PageSize);
         var activeStatusesByTableId = await _orderRepository.GetActiveStatusNamesByTableIdsAsync(
             tables.Select(table => table.Id), cancellationToken);
+        var activeWaiterIdsByTableId = await _orderRepository.GetActiveWaiterIdsByTableIdsAsync(
+            tables.Select(table => table.Id), cancellationToken);
 
-        var tableDtos = tables.Select(table => Map(table, activeStatusesByTableId)).ToArray();
+        var tableDtos = tables.Select(table => Map(table, activeStatusesByTableId, activeWaiterIdsByTableId)).ToArray();
 
         return new PagedResponseDto<TableResponseDto>
         {
@@ -43,14 +45,18 @@ public sealed class GetAllTablesQueryHandler : IGetAllTablesQueryHandler
         };
     }
 
-    private static TableResponseDto Map(Table table, IReadOnlyDictionary<Guid, string> activeStatusesByTableId) => new()
+    private static TableResponseDto Map(
+        Table table,
+        IReadOnlyDictionary<Guid, string> activeStatusesByTableId,
+        IReadOnlyDictionary<Guid, Guid> activeWaiterIdsByTableId) => new()
     {
         Id = table.Id,
         Number = table.Number,
         SeatCount = table.SeatCount,
         Location = table.Location,
         IsEnabled = table.IsEnabled,
-        OperationalStatus = GetOperationalStatus(table, activeStatusesByTableId)
+        OperationalStatus = GetOperationalStatus(table, activeStatusesByTableId),
+        ActiveWaiterId = activeWaiterIdsByTableId.TryGetValue(table.Id, out var waiterId) ? waiterId : null
     };
 
     private static string GetOperationalStatus(Table table, IReadOnlyDictionary<Guid, string> activeStatusesByTableId)

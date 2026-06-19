@@ -22,7 +22,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("Tables");
             e.HasKey(t => t.Id);
-            e.Property(t => t.Id).HasColumnType("uniqueidentifier");
+            e.Property(t => t.Id).HasColumnType("uniqueidentifier").ValueGeneratedNever();
             e.Property(t => t.Number).HasMaxLength(20).IsRequired();
             e.Property(t => t.SeatCount).IsRequired();
             e.Property(t => t.Location).HasMaxLength(80).IsRequired();
@@ -55,7 +55,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("Orders");
             e.HasKey(o => o.Id);
-            e.Property(o => o.Id).HasColumnType("uniqueidentifier");
+            e.Property(o => o.Id).HasColumnType("uniqueidentifier").ValueGeneratedNever();
             e.Property(o => o.TableId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(o => o.WaiterId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(o => o.StatusId).IsRequired();
@@ -102,7 +102,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("OrderItems");
             e.HasKey(i => i.Id);
-            e.Property(i => i.Id).HasColumnType("uniqueidentifier");
+            e.Property(i => i.Id).HasColumnType("uniqueidentifier").ValueGeneratedNever();
             e.Property(i => i.OrderId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(i => i.ProductId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(i => i.ProductType).HasMaxLength(50).IsRequired();
@@ -130,7 +130,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("OrderNotes");
             e.HasKey(n => n.Id);
-            e.Property(n => n.Id).HasColumnType("uniqueidentifier");
+            e.Property(n => n.Id).HasColumnType("uniqueidentifier").ValueGeneratedNever();
             e.Property(n => n.OrderId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(n => n.CreatedByUserId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(n => n.Note).HasMaxLength(1000).IsRequired();
@@ -142,7 +142,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("OrderStatusHistories");
             e.HasKey(h => h.Id);
-            e.Property(h => h.Id).HasColumnType("uniqueidentifier");
+            e.Property(h => h.Id).HasColumnType("uniqueidentifier").ValueGeneratedNever();
             e.Property(h => h.OrderId).HasColumnType("uniqueidentifier").IsRequired();
             e.Property(h => h.PreviousStatusId);
             e.Property(h => h.NewStatusId).IsRequired();

@@ -26,6 +26,7 @@ using OrderService.Application.UseCases.Tables.Queries.GetTableById;
 using OrderService.Infrastructure.Persistence.Repositories;
 using OrderService.Infrastructure.ExternalServices;
 using OrderService.Infrastructure.Persistence;
+using OrderService.Presentation.Http;
 using OrderService.Presentation.Middlewares;
 using System.Security.Claims;
 using System.Text;
@@ -33,12 +34,13 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql => sql.EnableRetryOnFailure()));
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IStatusRepository, StatusRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<AuthorizationHeaderPropagationHandler>();
 
 builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>((sp, client) =>
 {
@@ -52,7 +54,16 @@ builder.Services.AddHttpClient<IMenuCatalogClient, MenuCatalogClient>((sp, clien
     var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:MenuCatalog:BaseUrl"];
     if (!string.IsNullOrWhiteSpace(baseUrl))
         client.BaseAddress = new Uri(baseUrl);
-});
+})
+.AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>();
+
+builder.Services.AddHttpClient<IStockClient, StockClient>((sp, client) =>
+{
+    var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:Stock:BaseUrl"];
+    if (!string.IsNullOrWhiteSpace(baseUrl))
+        client.BaseAddress = new Uri(baseUrl);
+})
+.AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>();
 
 builder.Services.AddScoped<ICreateOrderCommandHandler, CreateOrderCommandHandler>();
 builder.Services.AddScoped<IAddItemToOrderCommandHandler, AddItemToOrderCommandHandler>();

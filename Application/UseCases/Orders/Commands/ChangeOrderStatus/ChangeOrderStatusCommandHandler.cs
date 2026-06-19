@@ -50,6 +50,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
         try
         {
             order.ChangeStatus(newStatus.Id, command.ChangedByUserId);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitTransactionAsync(cancellationToken);
         }

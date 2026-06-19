@@ -46,6 +46,7 @@ public sealed class UpdateItemStatusCommandHandler : IUpdateItemStatusCommandHan
         try
         {
             item.UpdateStatus(newStatus.Id);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitTransactionAsync(cancellationToken);
         }

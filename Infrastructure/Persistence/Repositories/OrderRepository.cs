@@ -130,6 +130,32 @@ public class OrderRepository : IOrderRepository
             .ToDictionary(group => group.Key, group => group.First().StatusName);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, Guid>> GetActiveWaiterIdsByTableIdsAsync(
+        IEnumerable<Guid> tableIds, CancellationToken ct = default)
+    {
+        var ids = tableIds.Distinct().ToArray();
+        if (ids.Length == 0)
+            return new Dictionary<Guid, Guid>();
+
+        var activeStatuses = new[]
+        {
+            OrderStatusIds.Open,
+            OrderStatusIds.InProgress,
+            OrderStatusIds.ReadyToClose
+        };
+
+        var activeOrders = await _context.Orders
+            .AsNoTracking()
+            .Where(o => ids.Contains(o.TableId) && activeStatuses.Contains(o.StatusId))
+            .OrderByDescending(o => o.CreatedAt)
+            .Select(o => new { o.TableId, o.WaiterId })
+            .ToListAsync(ct);
+
+        return activeOrders
+            .GroupBy(order => order.TableId)
+            .ToDictionary(group => group.Key, group => group.First().WaiterId);
+    }
+
     public async Task<bool> HasAnyOrderForTableAsync(Guid tableId, CancellationToken ct = default)
         => await _context.Orders.AnyAsync(o => o.TableId == tableId, ct);
 }

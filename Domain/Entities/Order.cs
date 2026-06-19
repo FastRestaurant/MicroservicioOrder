@@ -106,7 +106,7 @@ public class Order
 
     private void EnsureOrderIsModifiable()
     {
-        if (StatusId == OrderStatusIds.Closed || StatusId == OrderStatusIds.Cancelled)
+        if (StatusId == OrderStatusIds.ReadyToClose || StatusId == OrderStatusIds.Closed || StatusId == OrderStatusIds.Cancelled)
             throw new DomainException(
                 $"No se puede modificar una orden en estado '{StatusId}'. Solo se pueden modificar ordenes abiertas.");
     }

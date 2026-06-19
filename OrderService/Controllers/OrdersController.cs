@@ -119,12 +119,19 @@ public class OrdersController : ControllerBase
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OrderResponseDto>> Create([FromBody] CreateOrderCommand cmd, CancellationToken ct)
+    public async Task<ActionResult<OrderResponseDto>> Create([FromBody] CreateOrderRequest req, CancellationToken ct)
     {
         var command = new CreateOrderCommand
         {
-            TableId = cmd.TableId,
-            WaiterId = GetCurrentUserId()
+            TableId = req.TableId,
+            WaiterId = GetCurrentUserId(),
+            Items = req.Items.Select(item => new CreateOrderItemCommand
+            {
+                ProductId = item.ProductId,
+                ProductType = item.ProductType,
+                Quantity = item.Quantity,
+                Notes = item.Notes
+            }).ToArray()
         };
 
         var result = await _createOrderHandler.Handle(command, ct);
@@ -190,6 +197,20 @@ public class OrdersController : ControllerBase
 
         return parsedUserId;
     }
+}
+
+public sealed class CreateOrderRequest
+{
+    public Guid TableId { get; init; }
+    public IReadOnlyCollection<CreateOrderItemRequest> Items { get; init; } = Array.Empty<CreateOrderItemRequest>();
+}
+
+public sealed class CreateOrderItemRequest
+{
+    public Guid ProductId { get; init; }
+    public string ProductType { get; init; } = string.Empty;
+    public int Quantity { get; init; }
+    public string? Notes { get; init; }
 }
 
 public sealed class AddItemRequest

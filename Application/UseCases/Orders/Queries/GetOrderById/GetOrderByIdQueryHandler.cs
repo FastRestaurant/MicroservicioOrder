@@ -26,6 +26,7 @@ public sealed class GetOrderByIdQueryHandler : IGetOrderByIdQueryHandler
         return new OrderResponseDto
         {
             Id = order.Id,
+            TableId = order.TableId,
             TableNumber = order.Table.Number,
             WaiterId = order.WaiterId,
             Status = order.Status.Name,

@@ -10,7 +10,7 @@ public static class OrderStatusIds
 
     private static readonly Dictionary<int, int[]> ValidTransitions = new()
     {
-        [Open] = [InProgress, Cancelled],
+        [Open] = [InProgress, ReadyToClose, Cancelled],
         [InProgress] = [ReadyToClose, Cancelled],
         [ReadyToClose] = [Closed, InProgress],
         [Closed] = [],

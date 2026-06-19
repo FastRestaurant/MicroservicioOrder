@@ -8,4 +8,5 @@ public sealed class TableResponseDto
     public string Location { get; init; } = string.Empty;
     public bool IsEnabled { get; init; }
     public string OperationalStatus { get; init; } = string.Empty;
+    public Guid? ActiveWaiterId { get; init; }
 }
