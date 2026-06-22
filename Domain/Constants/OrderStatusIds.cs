@@ -8,15 +8,19 @@ public static class OrderStatusIds
     public const int Closed = 4;
     public const int Cancelled = 5;
 
+
     private static readonly Dictionary<int, int[]> ValidTransitions = new()
     {
-        [Open] = [InProgress, ReadyToClose, Cancelled],
+        [Open] = [InProgress, Cancelled],
         [InProgress] = [ReadyToClose, Cancelled],
-        [ReadyToClose] = [Closed, InProgress],
+        [ReadyToClose] = [Closed, Cancelled],
         [Closed] = [],
         [Cancelled] = []
     };
 
     public static bool IsValidTransition(int current, int next)
         => ValidTransitions.TryGetValue(current, out var allowed) && allowed.Contains(next);
+
+    public static bool IsTerminal(int statusId)
+        => statusId == Closed || statusId == Cancelled;
 }

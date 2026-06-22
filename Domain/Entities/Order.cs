@@ -59,8 +59,14 @@ public class Order
 
     public OrderStatusHistory ChangeStatus(int newStatusId, Guid changedByUserId)
     {
+        if (OrderStatusIds.IsTerminal(StatusId))
+            throw new DomainException(
+                $"La orden ya se encuentra en un estado final ('{StatusId}') y no admite nuevos cambios de estado.");
+
         if (!OrderStatusIds.IsValidTransition(StatusId, newStatusId))
-            throw new DomainException($"No se puede cambiar del estado '{StatusId}' al estado '{newStatusId}'.");
+            throw new DomainException(
+                $"No se puede cambiar del estado '{StatusId}' al estado '{newStatusId}'. " +
+                "Revise el flujo permitido: Open -> InProgress -> ReadyToClose -> Closed (o Cancelled en cualquier punto activo).");
 
         var history = new OrderStatusHistory
         {
