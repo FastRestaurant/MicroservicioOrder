@@ -17,6 +17,21 @@ public static class OrderItemStatusIds
         Cancelled
     ];
 
+    private static readonly Dictionary<int, int[]> ValidTransitions = new()
+    {
+        [Pending] = [SentToKitchen, Cancelled],
+        [SentToKitchen] = [Ready, Cancelled],
+        [Ready] = [Delivered, Cancelled],
+        [Delivered] = [],
+        [Cancelled] = []
+    };
+
     public static bool IsValid(int statusId)
         => ValidStatuses.Contains(statusId);
+
+    public static bool IsValidTransition(int current, int next)
+        => ValidTransitions.TryGetValue(current, out var allowed) && allowed.Contains(next);
+
+    public static bool IsTerminal(int statusId)
+        => statusId == Delivered || statusId == Cancelled;
 }

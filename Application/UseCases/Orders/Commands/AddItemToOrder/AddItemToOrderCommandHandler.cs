@@ -8,18 +8,23 @@ namespace OrderService.Application.UseCases.Orders.Commands.AddItemToOrder;
 
 public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
 {
+    private const int MaxQuantityPerItem = 50;
+
     private readonly IOrderRepository _orderRepository;
+    private readonly ITableRepository _tableRepository;
     private readonly IMenuCatalogClient _menuCatalogClient;
     private readonly IStockClient _stockClient;
     private readonly IUnitOfWork _unitOfWork;
 
     public AddItemToOrderCommandHandler(
         IOrderRepository orderRepository,
+        ITableRepository tableRepository,
         IMenuCatalogClient menuCatalogClient,
         IStockClient stockClient,
         IUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
+        _tableRepository = tableRepository;
         _menuCatalogClient = menuCatalogClient;
         _stockClient = stockClient;
         _unitOfWork = unitOfWork;
@@ -39,8 +44,26 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
         if (command.Quantity <= 0)
             throw new ValidationException("La cantidad debe ser mayor a cero.");
 
+        if (command.Quantity > MaxQuantityPerItem)
+            throw new ValidationException($"La cantidad no puede superar las {MaxQuantityPerItem} unidades por item.");
+
+        if (command.Notes?.Length > 500)
+            throw new ValidationException("Las notas del item no pueden superar los 500 caracteres.");
+
         if (!ProductTypes.IsValid(command.ProductType))
             throw new DomainException($"'{command.ProductType}' no es un tipo de producto valido.");
+
+        var order = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Order), command.OrderId);
+
+        if (order.StatusId == OrderStatusIds.ReadyToClose)
+            throw new DomainException("No se pueden agregar productos porque la cuenta ya fue solicitada.");
+
+        var table = await _tableRepository.GetByIdAsync(order.TableId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Table), order.TableId);
+
+        if (!table.IsEnabled)
+            throw new DomainException($"La mesa '{table.Number}' esta deshabilitada. No se pueden agregar productos.");
 
         var product = await _menuCatalogClient.GetProductAsync(command.ProductId, command.ProductType, cancellationToken)
             ?? throw new NotFoundException(command.ProductType, command.ProductId);
@@ -50,12 +73,6 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
 
         if (product.Duration < 0)
             throw new DomainException($"La duracion de preparacion de '{product.Name}' no es valida.");
-
-        var order = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
-            ?? throw new NotFoundException(nameof(Order), command.OrderId);
-
-        if (order.StatusId == OrderStatusIds.ReadyToClose)
-            throw new DomainException("No se pueden agregar productos porque la cuenta ya fue solicitada.");
 
         var item = OrderItem.Create(
             command.OrderId,

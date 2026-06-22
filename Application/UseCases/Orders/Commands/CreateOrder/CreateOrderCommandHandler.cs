@@ -8,6 +8,7 @@ namespace OrderService.Application.UseCases.Orders.Commands.CreateOrder;
 
 public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
 {
+    private const int MaxQuantityPerItem = 50;
     private readonly IOrderRepository _orderRepository;
     private readonly ITableRepository _tableRepository;
     private readonly IUserServiceClient _userServiceClient;
@@ -115,6 +116,9 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
 
         if (item.Quantity <= 0)
             throw new ValidationException("La cantidad debe ser mayor a cero.");
+
+        if (item.Quantity > MaxQuantityPerItem)
+            throw new ValidationException($"La cantidad no puede superar las {MaxQuantityPerItem} unidades por item.");
 
         if (item.Notes?.Length > 500)
             throw new ValidationException("Las notas del item no pueden superar los 500 caracteres.");

@@ -48,6 +48,15 @@ public class OrderItem
             throw new DomainException(
                 $"'{newStatusId}' no es un estado valido para un item.");
 
+        if (OrderItemStatusIds.IsTerminal(StatusId))
+            throw new DomainException(
+                $"El item ya se encuentra en un estado final ('{StatusId}') y no admite nuevos cambios de estado.");
+
+        if (!OrderItemStatusIds.IsValidTransition(StatusId, newStatusId))
+            throw new DomainException(
+                $"No se puede cambiar el item del estado '{StatusId}' al estado '{newStatusId}'. " +
+                "Revise el flujo permitido: Pending -> SentToKitchen -> Ready -> Delivered (o Cancelled en cualquier punto activo).");
+
         StatusId = newStatusId;
         UpdatedAt = DateTime.UtcNow;
 
