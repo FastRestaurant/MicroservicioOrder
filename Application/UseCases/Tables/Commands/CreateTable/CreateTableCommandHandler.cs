@@ -19,8 +19,8 @@ public sealed class CreateTableCommandHandler : ICreateTableCommandHandler
     public async Task<TableResponseDto> Handle(
         CreateTableCommand command, CancellationToken cancellationToken = default)
     {
-        var number = command.Number.Trim();
-        var location = command.Location.Trim();
+        var number = command.Number?.Trim() ?? string.Empty;
+        var location = command.Location?.Trim() ?? string.Empty;
 
         var table = Table.Create(number, command.SeatCount, location, command.IsEnabled);
 

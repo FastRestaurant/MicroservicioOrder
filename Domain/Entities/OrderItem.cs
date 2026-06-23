@@ -27,8 +27,7 @@ public class OrderItem
 
     private OrderItem() { }
 
-    public static OrderItem Create(Guid orderId, Guid productId, string productType,
-        string productName, decimal unitPrice, int durationMinutes, int quantity, string? notes = null)
+    public static void ValidateRequest(Guid productId, string productType, int quantity, string? notes)
     {
         if (productId == Guid.Empty)
             throw new ValidationException("El id del producto es obligatorio.");
@@ -47,6 +46,12 @@ public class OrderItem
 
         if (notes?.Length > MaxNotesLength)
             throw new ValidationException($"Las notas del item no pueden superar los {MaxNotesLength} caracteres.");
+    }
+
+    public static OrderItem Create(Guid orderId, Guid productId, string productType,
+        string productName, decimal unitPrice, int durationMinutes, int quantity, string? notes = null)
+    {
+        ValidateRequest(productId, productType, quantity, notes);
 
         if (unitPrice < 0)
             throw new DomainException("El precio unitario del producto no es valido.");

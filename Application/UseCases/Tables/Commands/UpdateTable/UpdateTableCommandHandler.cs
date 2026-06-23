@@ -24,8 +24,8 @@ public sealed class UpdateTableCommandHandler : IUpdateTableCommandHandler
         var table = await _tableRepository.GetByIdAsync(command.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.Id);
 
-        var number = command.Number.Trim();
-        var location = command.Location.Trim();
+        var number = command.Number?.Trim() ?? string.Empty;
+        var location = command.Location?.Trim() ?? string.Empty;
 
         var existing = await _tableRepository.GetByNumberAsync(number, cancellationToken);
         if (existing is not null && existing.Id != command.Id)

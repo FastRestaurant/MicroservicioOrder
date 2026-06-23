@@ -46,6 +46,8 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
         if (!table.IsEnabled)
             throw new DomainException($"La mesa '{table.Number}' esta deshabilitada. No se pueden agregar productos.");
 
+        OrderItem.ValidateRequest(command.ProductId, command.ProductType, command.Quantity, command.Notes);
+
         var product = await _menuCatalogClient.GetProductAsync(command.ProductId, command.ProductType, cancellationToken)
             ?? throw new NotFoundException(command.ProductType, command.ProductId);
 
@@ -112,11 +114,13 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
     {
         try
         {
-            await _stockClient.ReleaseForOrderAsync(new StockReleaseRequestDto
+            var releaseResult = await _stockClient.ReleaseForOrderAsync(new StockReleaseRequestDto
             {
                 OrderId = orderId,
                 OrderItemId = orderItemId
             }, cancellationToken);
+            if (!releaseResult.Success)
+                _logger.LogWarning("No se pudo liberar el stock reservado para la orden {OrderId}, item {OrderItemId}. {Message}", orderId, orderItemId, releaseResult.Message);
         }
         catch (Exception ex)
         {

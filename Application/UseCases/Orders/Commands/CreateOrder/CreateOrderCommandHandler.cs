@@ -64,7 +64,10 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         var orderItems = new List<OrderItem>();
 
         foreach (var requestedItem in command.Items)
+        {
+            OrderItem.ValidateRequest(requestedItem.ProductId, requestedItem.ProductType, requestedItem.Quantity, requestedItem.Notes);
             orderItems.Add(await CreateOrderItemAsync(order.Id, requestedItem, cancellationToken));
+        }
 
         var consumedItems = new List<OrderItem>();
         var transactionStarted = false;
@@ -157,11 +160,13 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         {
             try
             {
-                await _stockClient.ReleaseForOrderAsync(new StockReleaseRequestDto
+                var releaseResult = await _stockClient.ReleaseForOrderAsync(new StockReleaseRequestDto
                 {
                     OrderId = orderId,
                     OrderItemId = item.Id
                 }, cancellationToken);
+                if (!releaseResult.Success)
+                    _logger.LogWarning("No se pudo liberar el stock reservado para la orden {OrderId}, item {OrderItemId}. {Message}", orderId, item.Id, releaseResult.Message);
             }
             catch (Exception ex)
             {

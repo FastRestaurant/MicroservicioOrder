@@ -56,9 +56,16 @@ public sealed class TablesController : ControllerBase
     [Authorize(Roles = ApplicationRoles.Admin)]
     [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<TableResponseDto>> Create([FromBody] CreateTableCommand cmd, CancellationToken ct)
+    public async Task<ActionResult<TableResponseDto>> Create([FromBody] CreateTableRequest req, CancellationToken ct)
     {
-        var result = await _createHandler.Handle(cmd, ct);
+        var command = new CreateTableCommand
+        {
+            Number = req.Number,
+            SeatCount = req.SeatCount,
+            Location = req.Location,
+            IsEnabled = req.IsEnabled
+        };
+        var result = await _createHandler.Handle(command, ct);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
