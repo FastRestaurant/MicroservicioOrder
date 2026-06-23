@@ -38,6 +38,7 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IStatusRepository, StatusRepository>();
+builder.Services.AddScoped<ITableRepository, TableRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<AuthorizationHeaderPropagationHandler>();
@@ -86,7 +87,6 @@ builder.Services.AddScoped<IGetOrdersByStatusQueryHandler, GetOrdersByStatusQuer
 builder.Services.AddScoped<IGetOrdersByTableQueryHandler, GetOrdersByTableQueryHandler>();
 builder.Services.AddScoped<IGetOrderStatusesQueryHandler, GetOrderStatusesQueryHandler>();
 builder.Services.AddScoped<IGetOrderItemStatusesQueryHandler, GetOrderItemStatusesQueryHandler>();
-builder.Services.AddScoped<ITableRepository, TableRepository>();
 builder.Services.AddScoped<IGetAllTablesQueryHandler, GetAllTablesQueryHandler>();
 builder.Services.AddScoped<IGetOrderByIdQueryHandler, GetOrderByIdQueryHandler>();
 builder.Services.AddScoped<IGetTableByIdQueryHandler, GetTableByIdQueryHandler>();

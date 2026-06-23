@@ -7,14 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="DTOs\CreateTableDto.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="DTOs\CreateTableDto.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Domain\Domain.csproj" />
   </ItemGroup>
 

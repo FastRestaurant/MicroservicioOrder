@@ -96,7 +96,7 @@ public class AppDbContext : DbContext
             e.HasIndex(o => o.TableId)
              .IsUnique()
              .HasDatabaseName("UX_Orders_Active_TableId")
-             .HasFilter("[StatusId] IN (1, 2, 3)");
+             .HasFilter($"[StatusId] IN ({OrderStatusIds.Open}, {OrderStatusIds.InProgress}, {OrderStatusIds.ReadyToClose})");
         });
 
         modelBuilder.Entity<OrderItem>(e =>

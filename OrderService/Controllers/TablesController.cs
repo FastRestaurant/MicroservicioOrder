@@ -97,16 +97,3 @@ public sealed class TablesController : ControllerBase
         => Ok(await _toggleHandler.Handle(
             new ToggleTableStatusCommand { TableId = id, Enable = req.Enable }, ct));
 }
-
-public sealed class ToggleTableStatusRequest
-{
-    public bool Enable { get; init; }
-}
-
-public sealed class UpdateTableRequest
-{
-    public string Number { get; init; } = string.Empty;
-    public int SeatCount { get; init; }
-    public string Location { get; init; } = string.Empty;
-    public bool IsEnabled { get; init; }
-}

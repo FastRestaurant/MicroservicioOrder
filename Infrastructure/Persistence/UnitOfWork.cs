@@ -47,9 +47,26 @@ public sealed class UnitOfWork : IUnitOfWork
         if (_currentTransaction is null)
             return;
 
-        await _currentTransaction.CommitAsync(cancellationToken);
-        await _currentTransaction.DisposeAsync();
-        _currentTransaction = null;
+        try
+        {
+            await _currentTransaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            try
+            {
+                await _currentTransaction.RollbackAsync(cancellationToken);
+            }
+            catch
+            {
+            }
+            throw;
+        }
+        finally
+        {
+            await _currentTransaction.DisposeAsync();
+            _currentTransaction = null;
+        }
     }
 
     public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
