@@ -70,7 +70,7 @@ public sealed class StockClient : IStockClient
             };
         }
 
-        return new StockOperationResultDto { Success = true, Message = "Operacion de stock realizada correctamente." };
+        return new StockOperationResultDto { Success = false, Message = "No se pudo confirmar la operacion de stock." };
     }
 
     private static T? Deserialize<T>(string content)
