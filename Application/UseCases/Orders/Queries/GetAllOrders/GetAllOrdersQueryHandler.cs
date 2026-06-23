@@ -1,5 +1,6 @@
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
+using OrderService.Application.Mappings;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
@@ -28,26 +29,11 @@ public sealed class GetAllOrdersQueryHandler : IGetAllOrdersQueryHandler
 
         return new PagedResponseDto<OrderSummaryDto>
         {
-            Items = orders.Select(MapOrder).ToArray(),
+            Items = orders.Select(OrderMapper.ToSummary).ToArray(),
             Page = query.Page,
             PageSize = query.PageSize,
             TotalItems = totalCount,
             TotalPages = totalPages
-        };
-    }
-
-    private static OrderSummaryDto MapOrder(Order order)
-    {
-        return new OrderSummaryDto
-        {
-            Id = order.Id,
-            TableId = order.TableId,
-            TableNumber = order.Table.Number,
-            WaiterId = order.WaiterId,
-            Status = order.Status.Name,
-            Total = order.Total,
-            CreatedAt = order.CreatedAt,
-            ItemCount = order.Items.Count
         };
     }
 }
