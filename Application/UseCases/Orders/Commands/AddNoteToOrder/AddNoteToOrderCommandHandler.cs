@@ -37,7 +37,7 @@ public sealed class AddNoteToOrderCommandHandler : IAddNoteToOrderCommandHandler
         if (!userExists)
             throw new NotFoundException("User", command.CreatedByUserId);
 
-        var order = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var order = await _orderRepository.GetByIdForUpdateAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -53,7 +53,7 @@ public sealed class AddNoteToOrderCommandHandler : IAddNoteToOrderCommandHandler
             throw;
         }
 
-        var updatedOrder = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var updatedOrder = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         return OrderMapper.ToResponse(updatedOrder);

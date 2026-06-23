@@ -37,7 +37,7 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
         if (command.OrderId == Guid.Empty)
             throw new ValidationException("El id de la orden es obligatorio.");
 
-        var order = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var order = await _orderRepository.GetByIdForUpdateAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         var table = await _tableRepository.GetByIdAsync(order.TableId, cancellationToken)
@@ -90,7 +90,7 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
             throw;
         }
 
-        var updatedOrder = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var updatedOrder = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         return OrderMapper.ToResponse(updatedOrder);

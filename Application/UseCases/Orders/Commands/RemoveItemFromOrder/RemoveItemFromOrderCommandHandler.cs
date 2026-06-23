@@ -27,7 +27,7 @@ public sealed class RemoveItemFromOrderCommandHandler : IRemoveItemFromOrderComm
         if (command.ItemId == Guid.Empty)
             throw new ValidationException("El id del item es obligatorio.");
 
-        var order = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var order = await _orderRepository.GetByIdForUpdateAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         var item = order.Items.FirstOrDefault(i => i.Id == command.ItemId)
@@ -47,7 +47,7 @@ public sealed class RemoveItemFromOrderCommandHandler : IRemoveItemFromOrderComm
             throw;
         }
 
-        var updatedOrder = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var updatedOrder = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         return OrderMapper.ToResponse(updatedOrder);

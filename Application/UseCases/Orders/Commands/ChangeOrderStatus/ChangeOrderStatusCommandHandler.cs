@@ -44,7 +44,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
         var newStatus = await _statusRepository.GetByNameAsync(command.NewStatus, StatusTypes.Order, cancellationToken)
             ?? throw new DomainException($"'{command.NewStatus}' no es un estado valido para una orden.");
 
-        var order = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var order = await _orderRepository.GetByIdForUpdateAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -61,7 +61,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
             throw;
         }
 
-        var updatedOrder = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var updatedOrder = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         return OrderMapper.ToResponse(updatedOrder);

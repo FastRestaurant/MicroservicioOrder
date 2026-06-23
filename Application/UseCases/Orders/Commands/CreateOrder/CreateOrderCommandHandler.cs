@@ -97,7 +97,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
             throw;
         }
 
-        var createdOrder = await _orderRepository.GetByIdWithDetailsAsync(order.Id, cancellationToken)
+        var createdOrder = await _orderRepository.GetByIdForReadAsync(order.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), order.Id);
 
         return OrderMapper.ToResponse(createdOrder);

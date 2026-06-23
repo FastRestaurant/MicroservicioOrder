@@ -17,7 +17,7 @@ public sealed class GetOrderByIdQueryHandler : IGetOrderByIdQueryHandler
 
     public async Task<OrderResponseDto> Handle(GetOrderByIdQuery query, CancellationToken cancellationToken = default)
     {
-        var order = await _orderRepository.GetByIdWithDetailsAsync(query.Id, cancellationToken)
+        var order = await _orderRepository.GetByIdForReadAsync(query.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), query.Id);
         return OrderMapper.ToResponse(order);
     }

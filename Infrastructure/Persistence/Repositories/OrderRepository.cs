@@ -14,8 +14,19 @@ public class OrderRepository : IOrderRepository
         _context = context;
     }
 
-    public async Task<Order?> GetByIdWithDetailsAsync(Guid id, CancellationToken ct = default)
-        => await _context.Orders
+    public Task<Order?> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default)
+        => WithDetails(_context.Orders)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(o => o.Id == id, ct);
+
+    public Task<Order?> GetByIdForReadAsync(Guid id, CancellationToken ct = default)
+        => WithDetails(_context.Orders)
+            .AsNoTracking()
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(o => o.Id == id, ct);
+
+    private static IQueryable<Order> WithDetails(IQueryable<Order> orders)
+        => orders
             .Include(o => o.Table)
             .Include(o => o.Status)
             .Include(o => o.Items)
@@ -24,8 +35,7 @@ public class OrderRepository : IOrderRepository
             .Include(o => o.StatusHistory)
                 .ThenInclude(h => h.PreviousStatus)
             .Include(o => o.StatusHistory)
-                .ThenInclude(h => h.NewStatus)
-            .FirstOrDefaultAsync(o => o.Id == id, ct);
+                .ThenInclude(h => h.NewStatus);
 
     public async Task<(IReadOnlyCollection<Order> Orders, int TotalCount)> GetPagedAsync(
         int page, int pageSize, CancellationToken ct = default)

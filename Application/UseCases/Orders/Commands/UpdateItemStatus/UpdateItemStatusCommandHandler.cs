@@ -37,7 +37,7 @@ public sealed class UpdateItemStatusCommandHandler : IUpdateItemStatusCommandHan
         var newStatus = await _statusRepository.GetByNameAsync(command.NewStatus, StatusTypes.OrderItem, cancellationToken)
             ?? throw new DomainException($"'{command.NewStatus}' no es un estado valido para un item de la orden.");
 
-        var order = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var order = await _orderRepository.GetByIdForUpdateAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         var item = order.Items.FirstOrDefault(i => i.Id == command.ItemId)
@@ -57,7 +57,7 @@ public sealed class UpdateItemStatusCommandHandler : IUpdateItemStatusCommandHan
             throw;
         }
 
-        var updatedOrder = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
+        var updatedOrder = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
         return OrderMapper.ToResponse(updatedOrder);
