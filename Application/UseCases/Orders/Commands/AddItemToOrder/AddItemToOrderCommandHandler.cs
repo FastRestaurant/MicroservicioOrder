@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
-using OrderService.Domain.Constants;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
@@ -40,9 +39,6 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
 
         var order = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
-
-        if (order.StatusId == OrderStatusIds.ReadyToClose)
-            throw new DomainException("No se pueden agregar productos porque la cuenta ya fue solicitada.");
 
         var table = await _tableRepository.GetByIdAsync(order.TableId, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), order.TableId);
