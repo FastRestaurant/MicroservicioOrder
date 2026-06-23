@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
@@ -14,19 +15,22 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
     private readonly IMenuCatalogClient _menuCatalogClient;
     private readonly IStockClient _stockClient;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<AddItemToOrderCommandHandler> _logger;
 
     public AddItemToOrderCommandHandler(
         IOrderRepository orderRepository,
         ITableRepository tableRepository,
         IMenuCatalogClient menuCatalogClient,
         IStockClient stockClient,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<AddItemToOrderCommandHandler> logger)
     {
         _orderRepository = orderRepository;
         _tableRepository = tableRepository;
         _menuCatalogClient = menuCatalogClient;
         _stockClient = stockClient;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<OrderResponseDto> Handle(AddItemToOrderCommand command, CancellationToken cancellationToken = default)
@@ -102,8 +106,9 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
         {
             await _unitOfWork.RollbackTransactionAsync(cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "No se pudo revertir la transaccion al agregar el item a la orden.");
         }
     }
 
@@ -117,8 +122,9 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
                 OrderItemId = orderItemId
             }, cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "No se pudo liberar el stock reservado para la orden {OrderId}, item {OrderItemId}.", orderId, orderItemId);
         }
     }
 }
