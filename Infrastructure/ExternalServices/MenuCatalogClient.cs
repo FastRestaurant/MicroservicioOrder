@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Domain.Constants;
+using OrderService.Domain.Exceptions;
 
 namespace OrderService.Infrastructure.ExternalServices;
 
@@ -21,24 +22,36 @@ public sealed class MenuCatalogClient : IMenuCatalogClient
             return null;
 
         var resource = productType == ProductTypes.Dish ? "dishes" : "drinks";
-        var response = await _httpClient.GetAsync($"api/menu-integration/{resource}/{productId}/for-order", cancellationToken);
 
-        if (response.StatusCode == HttpStatusCode.NotFound)
-            return null;
+        try
+        {
+            var response = await _httpClient.GetAsync($"api/menu-integration/{resource}/{productId}/for-order", cancellationToken);
 
-        response.EnsureSuccessStatusCode();
-        var product = await response.Content.ReadFromJsonAsync<MenuProductResponseDto>(cancellationToken: cancellationToken);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return null;
 
-        return product is null
-            ? null
-            : new ProductCatalogItemDto
-            {
-                Id = product.Id,
-                Name = product.Name,
-                Price = product.Price,
-                Available = product.Available,
-                Duration = product.Duration > 0 ? product.Duration : product.EstimatedPreparationMinutes
-            };
+            response.EnsureSuccessStatusCode();
+            var product = await response.Content.ReadFromJsonAsync<MenuProductResponseDto>(cancellationToken: cancellationToken);
+
+            return product is null
+                ? null
+                : new ProductCatalogItemDto
+                {
+                    Id = product.Id,
+                    Name = product.Name,
+                    Price = product.Price,
+                    Available = product.Available,
+                    Duration = product.Duration > 0 ? product.Duration : product.EstimatedPreparationMinutes
+                };
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new DomainException("No se pudo obtener el producto del catalogo en este momento.");
+        }
+        catch (HttpRequestException)
+        {
+            throw new DomainException("No se pudo obtener el producto del catalogo en este momento.");
+        }
     }
 
     private sealed class MenuProductResponseDto

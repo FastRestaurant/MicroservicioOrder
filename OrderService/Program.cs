@@ -47,23 +47,33 @@ builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>((sp, clien
     var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:Users:BaseUrl"];
     if (!string.IsNullOrWhiteSpace(baseUrl))
         client.BaseAddress = new Uri(baseUrl);
-});
+    client.Timeout = TimeSpan.FromSeconds(10);
+})
+.AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>()
+.AddPolicyHandler(HttpResiliencePolicies.Retry)
+.AddPolicyHandler(HttpResiliencePolicies.CircuitBreaker);
 
 builder.Services.AddHttpClient<IMenuCatalogClient, MenuCatalogClient>((sp, client) =>
 {
     var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:MenuCatalog:BaseUrl"];
     if (!string.IsNullOrWhiteSpace(baseUrl))
         client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
 })
-.AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>();
+.AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>()
+.AddPolicyHandler(HttpResiliencePolicies.Retry)
+.AddPolicyHandler(HttpResiliencePolicies.CircuitBreaker);
 
 builder.Services.AddHttpClient<IStockClient, StockClient>((sp, client) =>
 {
     var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:Stock:BaseUrl"];
     if (!string.IsNullOrWhiteSpace(baseUrl))
         client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(5);
 })
-.AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>();
+.AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>()
+.AddPolicyHandler(HttpResiliencePolicies.Retry)
+.AddPolicyHandler(HttpResiliencePolicies.CircuitBreaker);
 
 builder.Services.AddScoped<ICreateOrderCommandHandler, CreateOrderCommandHandler>();
 builder.Services.AddScoped<IAddItemToOrderCommandHandler, AddItemToOrderCommandHandler>();
