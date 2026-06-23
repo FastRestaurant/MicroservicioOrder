@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
@@ -12,18 +13,24 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
     private readonly IOrderRepository _orderRepository;
     private readonly IStatusRepository _statusRepository;
     private readonly IUserServiceClient _userServiceClient;
+    private readonly IStockClient _stockClient;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<ChangeOrderStatusCommandHandler> _logger;
 
     public ChangeOrderStatusCommandHandler(
         IOrderRepository orderRepository,
         IStatusRepository statusRepository,
         IUserServiceClient userServiceClient,
-        IUnitOfWork unitOfWork)
+        IStockClient stockClient,
+        IUnitOfWork unitOfWork,
+        ILogger<ChangeOrderStatusCommandHandler> logger)
     {
         _orderRepository = orderRepository;
         _statusRepository = statusRepository;
         _userServiceClient = userServiceClient;
+        _stockClient = stockClient;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<OrderResponseDto> Handle(ChangeOrderStatusCommand command, CancellationToken cancellationToken = default)
@@ -64,6 +71,31 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
         var updatedOrder = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
+        if (newStatus.Id == OrderStatusIds.Cancelled)
+            await ReleaseOrderStockAsync(updatedOrder.Id, updatedOrder.Items, cancellationToken);
+
         return OrderMapper.ToResponse(updatedOrder);
+    }
+
+    private async Task ReleaseOrderStockAsync(Guid orderId, IEnumerable<OrderItem> items, CancellationToken cancellationToken)
+    {
+        foreach (var item in items)
+        {
+            try
+            {
+                var releaseResult = await _stockClient.ReleaseForOrderAsync(new StockReleaseRequestDto
+                {
+                    OrderId = orderId,
+                    OrderItemId = item.Id
+                }, cancellationToken);
+
+                if (!releaseResult.Success)
+                    _logger.LogWarning("No se pudo liberar el stock al cancelar la orden {OrderId}, item {OrderItemId}. {Message}", orderId, item.Id, releaseResult.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo liberar el stock al cancelar la orden {OrderId}, item {OrderItemId}.", orderId, item.Id);
+            }
+        }
     }
 }
