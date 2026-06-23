@@ -14,6 +14,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
     private readonly IUserServiceClient _userServiceClient;
     private readonly IMenuCatalogClient _menuCatalogClient;
     private readonly IStockClient _stockClient;
+    private readonly IKitchenClient _kitchenClient;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CreateOrderCommandHandler> _logger;
 
@@ -23,6 +24,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         IUserServiceClient userServiceClient,
         IMenuCatalogClient menuCatalogClient,
         IStockClient stockClient,
+        IKitchenClient kitchenClient,
         IUnitOfWork unitOfWork,
         ILogger<CreateOrderCommandHandler> logger)
     {
@@ -31,6 +33,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         _userServiceClient = userServiceClient;
         _menuCatalogClient = menuCatalogClient;
         _stockClient = stockClient;
+        _kitchenClient = kitchenClient;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -99,6 +102,8 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
             await TryReleaseConsumedStockAsync(order.Id, consumedItems, cancellationToken);
             throw;
         }
+
+        await SendToKitchenAsync(order, command.WaiterId, table.Number, orderItems, cancellationToken);
 
         var createdOrder = await _orderRepository.GetByIdForReadAsync(order.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), order.Id);
@@ -172,6 +177,39 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
             {
                 _logger.LogWarning(ex, "No se pudo liberar el stock reservado para la orden {OrderId}, item {OrderItemId}.", orderId, item.Id);
             }
+        }
+    }
+
+    private async Task SendToKitchenAsync(Order order, Guid waiterId, string tableNumber, IEnumerable<OrderItem> items, CancellationToken cancellationToken)
+    {
+        var ticket = new KitchenTicketRequestDto
+        {
+            OrderId = order.Id,
+            TableId = order.TableId,
+            TableNumber = int.TryParse(tableNumber, out var parsed) ? parsed : 0,
+            WaiterId = waiterId,
+            CreatedAtUtc = order.CreatedAt,
+            Items = items.Select(item => new KitchenTicketItemDto
+            {
+                OrderItemId = item.Id,
+                ProductId = item.ProductId,
+                ProductName = item.ProductNameSnapshot,
+                ProductType = item.ProductType,
+                DurationMinutes = item.DurationMinutesSnapshot,
+                Quantity = item.Quantity,
+                Notes = item.Notes
+            }).ToArray()
+        };
+
+        try
+        {
+            var result = await _kitchenClient.EnqueueOrderAsync(ticket, cancellationToken);
+            if (!result.Success)
+                _logger.LogWarning("No se pudo enviar la orden {OrderId} a la cocina. {Message}", order.Id, result.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo enviar la orden {OrderId} a la cocina.", order.Id);
         }
     }
 }
