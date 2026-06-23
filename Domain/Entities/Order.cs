@@ -68,15 +68,7 @@ public class Order
                 $"No se puede cambiar del estado '{StatusId}' al estado '{newStatusId}'. " +
                 "Revise el flujo permitido: Open -> InProgress -> ReadyToClose -> Closed (o Cancelled en cualquier punto activo).");
 
-        var history = new OrderStatusHistory
-        {
-            Id = Guid.NewGuid(),
-            OrderId = Id,
-            PreviousStatusId = StatusId,
-            NewStatusId = newStatusId,
-            ChangedByUserId = changedByUserId,
-            ChangedAt = DateTime.UtcNow
-        };
+        var history = OrderStatusHistory.Create(Id, StatusId, newStatusId, changedByUserId);
 
         StatusHistory.Add(history);
         StatusId = newStatusId;
@@ -92,14 +84,7 @@ public class Order
     {
         EnsureOrderIsModifiable();
 
-        var note = new OrderNote
-        {
-            Id = Guid.NewGuid(),
-            OrderId = Id,
-            CreatedByUserId = createdByUserId,
-            Note = noteText,
-            CreatedAt = DateTime.UtcNow
-        };
+        var note = OrderNote.Create(Id, createdByUserId, noteText);
         Notes.Add(note);
         UpdatedAt = DateTime.UtcNow;
         return note;

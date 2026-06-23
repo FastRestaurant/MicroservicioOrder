@@ -1,4 +1,4 @@
-﻿using OrderService.Application.DTOs;
+using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
@@ -19,23 +19,15 @@ public sealed class CreateTableCommandHandler : ICreateTableCommandHandler
     public async Task<TableResponseDto> Handle(
         CreateTableCommand command, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(command.Number))
-            throw new ValidationException("El número de mesa es obligatorio.");
-
-        if (command.SeatCount <= 0)
-            throw new ValidationException("La cantidad de sillas debe ser mayor a cero.");
-
-        if (string.IsNullOrWhiteSpace(command.Location))
-            throw new ValidationException("La ubicación de la mesa es obligatoria.");
-
         var number = command.Number.Trim();
         var location = command.Location.Trim();
+
+        var table = Table.Create(number, command.SeatCount, location, command.IsEnabled);
 
         var existing = await _tableRepository.GetByNumberAsync(number, cancellationToken);
         if (existing is not null)
             throw new DomainException($"Ya existe una mesa con el número '{number}'.");
 
-        var table = Table.Create(number, command.SeatCount, location, command.IsEnabled);
         await _tableRepository.AddAsync(table, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

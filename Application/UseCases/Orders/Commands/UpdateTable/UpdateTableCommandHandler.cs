@@ -21,20 +21,12 @@ public sealed class UpdateTableCommandHandler : IUpdateTableCommandHandler
         if (command.Id == Guid.Empty)
             throw new ValidationException("El id de la mesa es obligatorio.");
 
-        if (string.IsNullOrWhiteSpace(command.Number))
-            throw new ValidationException("El número de mesa es obligatorio.");
-
-        if (command.SeatCount <= 0)
-            throw new ValidationException("La cantidad de sillas debe ser mayor a cero.");
-
-        if (string.IsNullOrWhiteSpace(command.Location))
-            throw new ValidationException("La ubicación de la mesa es obligatoria.");
-
         var table = await _tableRepository.GetByIdAsync(command.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.Id);
 
         var number = command.Number.Trim();
         var location = command.Location.Trim();
+
         var existing = await _tableRepository.GetByNumberAsync(number, cancellationToken);
         if (existing is not null && existing.Id != command.Id)
             throw new DomainException($"Ya existe una mesa con el número '{number}'.");

@@ -1,7 +1,6 @@
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
-using OrderService.Domain.Constants;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
@@ -9,7 +8,6 @@ namespace OrderService.Application.UseCases.Orders.Commands.CreateOrder;
 
 public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
 {
-    private const int MaxQuantityPerItem = 50;
     private readonly IOrderRepository _orderRepository;
     private readonly ITableRepository _tableRepository;
     private readonly IUserServiceClient _userServiceClient;
@@ -43,9 +41,6 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
 
         if (command.Items.Count == 0)
             throw new ValidationException("La orden debe tener al menos un item.");
-
-        foreach (var item in command.Items)
-            ValidateItem(item);
 
         var waiterExists = await _userServiceClient.ExistsAsync(command.WaiterId, cancellationToken);
         if (!waiterExists)
@@ -104,27 +99,6 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         return OrderMapper.ToResponse(createdOrder);
     }
 
-    private static void ValidateItem(CreateOrderItemCommand item)
-    {
-        if (item.ProductId == Guid.Empty)
-            throw new ValidationException("El id del producto es obligatorio.");
-
-        if (string.IsNullOrWhiteSpace(item.ProductType))
-            throw new ValidationException("El tipo de producto es obligatorio.");
-
-        if (!ProductTypes.IsValid(item.ProductType))
-            throw new DomainException($"'{item.ProductType}' no es un tipo de producto valido.");
-
-        if (item.Quantity <= 0)
-            throw new ValidationException("La cantidad debe ser mayor a cero.");
-
-        if (item.Quantity > MaxQuantityPerItem)
-            throw new ValidationException($"La cantidad no puede superar las {MaxQuantityPerItem} unidades por item.");
-
-        if (item.Notes?.Length > 500)
-            throw new ValidationException("Las notas del item no pueden superar los 500 caracteres.");
-    }
-
     private async Task<OrderItem> CreateOrderItemAsync(Guid orderId, CreateOrderItemCommand requestedItem, CancellationToken cancellationToken)
     {
         var product = await _menuCatalogClient.GetProductAsync(requestedItem.ProductId, requestedItem.ProductType, cancellationToken)
@@ -132,9 +106,6 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
 
         if (!product.Available)
             throw new DomainException($"{requestedItem.ProductType} '{product.Name}' no esta disponible.");
-
-        if (product.Duration < 0)
-            throw new DomainException($"La duracion de preparacion de '{product.Name}' no es valida.");
 
         return OrderItem.Create(
             orderId,

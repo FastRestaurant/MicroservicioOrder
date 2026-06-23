@@ -9,8 +9,6 @@ namespace OrderService.Application.UseCases.Orders.Commands.AddItemToOrder;
 
 public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
 {
-    private const int MaxQuantityPerItem = 50;
-
     private readonly IOrderRepository _orderRepository;
     private readonly ITableRepository _tableRepository;
     private readonly IMenuCatalogClient _menuCatalogClient;
@@ -36,24 +34,6 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
         if (command.OrderId == Guid.Empty)
             throw new ValidationException("El id de la orden es obligatorio.");
 
-        if (command.ProductId == Guid.Empty)
-            throw new ValidationException("El id del producto es obligatorio.");
-
-        if (string.IsNullOrWhiteSpace(command.ProductType))
-            throw new ValidationException("El tipo de producto es obligatorio.");
-
-        if (command.Quantity <= 0)
-            throw new ValidationException("La cantidad debe ser mayor a cero.");
-
-        if (command.Quantity > MaxQuantityPerItem)
-            throw new ValidationException($"La cantidad no puede superar las {MaxQuantityPerItem} unidades por item.");
-
-        if (command.Notes?.Length > 500)
-            throw new ValidationException("Las notas del item no pueden superar los 500 caracteres.");
-
-        if (!ProductTypes.IsValid(command.ProductType))
-            throw new DomainException($"'{command.ProductType}' no es un tipo de producto valido.");
-
         var order = await _orderRepository.GetByIdWithDetailsAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
@@ -71,9 +51,6 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
 
         if (!product.Available)
             throw new DomainException($"{command.ProductType} '{product.Name}' no esta disponible.");
-
-        if (product.Duration < 0)
-            throw new DomainException($"La duracion de preparacion de '{product.Name}' no es valida.");
 
         var item = OrderItem.Create(
             command.OrderId,
