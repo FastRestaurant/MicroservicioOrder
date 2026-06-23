@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
@@ -15,6 +15,7 @@ using OrderService.Application.UseCases.Orders.Queries.GetOrderStatuses;
 using OrderService.Application.UseCases.Orders.Queries.GetOrdersByStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetOrdersByTable;
 using OrderService.Domain.Exceptions;
+using OrderService.Presentation.Authorization;
 using System.Security.Claims;
 
 namespace OrderService.Presentation.Controllers;
@@ -22,7 +23,7 @@ namespace OrderService.Presentation.Controllers;
 [ApiController]
 [Route("api/v1/orders")]
 [Authorize]
-public class OrdersController : ControllerBase
+public sealed class OrdersController : ControllerBase
 {
     private readonly ICreateOrderCommandHandler _createOrderHandler;
     private readonly IAddItemToOrderCommandHandler _addItemHandler;
@@ -66,7 +67,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Waitress,Kitchen")]
+    [Authorize(Roles = ApplicationRoles.AdminWaitressOrKitchen)]
     [ProducesResponseType(typeof(PagedResponseDto<OrderSummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PagedResponseDto<OrderSummaryDto>>> GetAll([FromQuery] GetAllOrdersQuery query, CancellationToken ct)
@@ -83,14 +84,14 @@ public class OrdersController : ControllerBase
         => Ok(await _getOrderItemStatusesHandler.Handle(new GetOrderItemStatusesQuery(), ct));
 
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Admin,Waitress,Kitchen")]
+    [Authorize(Roles = ApplicationRoles.AdminWaitressOrKitchen)]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<OrderResponseDto>> GetById(Guid id, CancellationToken ct)
         => Ok(await _getByIdHandler.Handle(new GetOrderByIdQuery { Id = id }, ct));
 
     [HttpGet("status/{status}")]
-    [Authorize(Roles = "Admin,Waitress,Kitchen")]
+    [Authorize(Roles = ApplicationRoles.AdminWaitressOrKitchen)]
     [ProducesResponseType(typeof(PagedResponseDto<OrderSummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PagedResponseDto<OrderSummaryDto>>> GetByStatus(
@@ -103,7 +104,7 @@ public class OrdersController : ControllerBase
         }, ct));
 
     [HttpGet("table/{tableId:guid}")]
-    [Authorize(Roles = "Admin,Waitress")]
+    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
     [ProducesResponseType(typeof(PagedResponseDto<OrderSummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PagedResponseDto<OrderSummaryDto>>> GetByTable(
@@ -115,7 +116,7 @@ public class OrdersController : ControllerBase
          PageSize = query.PageSize
      }, ct));
     [HttpPost]
-    [Authorize(Roles = "Admin,Waitress")]
+    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
@@ -139,7 +140,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/items")]
-    [Authorize(Roles = "Admin,Waitress")]
+    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
@@ -157,7 +158,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}/items/{itemId:guid}")]
-    [Authorize(Roles = "Admin,Waitress")]
+    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
@@ -165,7 +166,7 @@ public class OrdersController : ControllerBase
         => Ok(await _removeItemHandler.Handle(new RemoveItemFromOrderCommand { OrderId = id, ItemId = itemId }, ct));
 
     [HttpPatch("{id:guid}/status")]
-    [Authorize(Roles = "Admin,Waitress")]
+    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
@@ -173,7 +174,7 @@ public class OrdersController : ControllerBase
         => Ok(await _changeStatusHandler.Handle(new ChangeOrderStatusCommand { OrderId = id, NewStatus = req.NewStatus, ChangedByUserId = GetCurrentUserId() }, ct));
 
     [HttpPost("{id:guid}/notes")]
-    [Authorize(Roles = "Admin,Waitress,Kitchen")]
+    [Authorize(Roles = ApplicationRoles.AdminWaitressOrKitchen)]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
@@ -181,7 +182,7 @@ public class OrdersController : ControllerBase
         => Ok(await _addNoteHandler.Handle(new AddNoteToOrderCommand { OrderId = id, CreatedByUserId = GetCurrentUserId(), Note = req.Note }, ct));
 
     [HttpPatch("{id:guid}/items/{itemId:guid}/status")]
-    [Authorize(Roles = "Admin,Kitchen")]
+    [Authorize(Roles = ApplicationRoles.AdminOrKitchen)]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
@@ -8,13 +8,14 @@ using OrderService.Application.UseCases.Tables.Commands.ToggleTableStatus;
 using OrderService.Application.UseCases.Tables.Commands.UpdateTable;
 using OrderService.Application.UseCases.Tables.Queries.GetAllTables;
 using OrderService.Application.UseCases.Tables.Queries.GetTableById;
+using OrderService.Presentation.Authorization;
 
 namespace OrderService.Presentation.Controllers;
 
 [ApiController]
 [Route("api/v1/tables")]
 [Authorize]
-public class TablesController : ControllerBase
+public sealed class TablesController : ControllerBase
 {
     private readonly IGetAllTablesQueryHandler _getAllHandler;
     private readonly IGetTableByIdQueryHandler _getByIdHandler;
@@ -52,7 +53,7 @@ public class TablesController : ControllerBase
         => Ok(await _getByIdHandler.Handle(new GetTableByIdQuery { Id = id }, ct));
 
     [HttpPost]
-    [Authorize(Roles = "Admin,ADMIN")]
+    [Authorize(Roles = ApplicationRoles.Admin)]
     [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TableResponseDto>> Create([FromBody] CreateTableCommand cmd, CancellationToken ct)
@@ -62,7 +63,7 @@ public class TablesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}")]
-    [Authorize(Roles = "Admin,ADMIN")]
+    [Authorize(Roles = ApplicationRoles.Admin)]
     [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
@@ -77,7 +78,7 @@ public class TablesController : ControllerBase
         }, ct));
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin,ADMIN")]
+    [Authorize(Roles = ApplicationRoles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
@@ -88,7 +89,7 @@ public class TablesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
-    [Authorize(Roles = "Admin,ADMIN")]
+    [Authorize(Roles = ApplicationRoles.Admin)]
     [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TableResponseDto>> ToggleStatus(
