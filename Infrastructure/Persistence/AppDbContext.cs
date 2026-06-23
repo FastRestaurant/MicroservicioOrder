@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
             e.Property(t => t.SeatCount).IsRequired();
             e.Property(t => t.Location).HasMaxLength(80).IsRequired();
             e.Property(t => t.IsEnabled).IsRequired();
+            e.Property(t => t.Version).IsRowVersion();
             e.HasIndex(t => t.Number).IsUnique();
         });
 

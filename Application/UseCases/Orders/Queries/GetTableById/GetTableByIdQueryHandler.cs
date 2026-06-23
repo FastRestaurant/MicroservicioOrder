@@ -29,7 +29,8 @@ public sealed class GetTableByIdQueryHandler : IGetTableByIdQueryHandler
             SeatCount = table.SeatCount,
             Location = table.Location,
             IsEnabled = table.IsEnabled,
-            OperationalStatus = await GetOperationalStatus(table, cancellationToken)
+            OperationalStatus = await GetOperationalStatus(table, cancellationToken),
+            Version = table.Version
         };
     }
 

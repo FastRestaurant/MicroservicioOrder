@@ -9,6 +9,7 @@ public class Table
     public int SeatCount { get; private set; }
     public string Location { get; private set; } = string.Empty;
     public bool IsEnabled { get; private set; }
+    public byte[] Version { get; private set; } = [];
 
     private Table() { }
 

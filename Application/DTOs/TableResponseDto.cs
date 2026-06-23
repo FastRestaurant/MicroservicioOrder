@@ -9,4 +9,5 @@ public sealed class TableResponseDto
     public bool IsEnabled { get; init; }
     public string OperationalStatus { get; init; } = string.Empty;
     public Guid? ActiveWaiterId { get; init; }
+    public byte[] Version { get; init; } = [];
 }
