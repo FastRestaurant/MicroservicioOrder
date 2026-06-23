@@ -76,6 +76,17 @@ builder.Services.AddHttpClient<IStockClient, StockClient>((sp, client) =>
 .AddPolicyHandler(HttpResiliencePolicies.Retry)
 .AddPolicyHandler(HttpResiliencePolicies.CircuitBreaker);
 
+builder.Services.AddHttpClient<IKitchenClient, KitchenClient>((sp, client) =>
+{
+    var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:Kitchen:BaseUrl"];
+    if (!string.IsNullOrWhiteSpace(baseUrl))
+        client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(5);
+})
+.AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>()
+.AddPolicyHandler(HttpResiliencePolicies.Retry)
+.AddPolicyHandler(HttpResiliencePolicies.CircuitBreaker);
+
 builder.Services.AddScoped<ICreateOrderCommandHandler, CreateOrderCommandHandler>();
 builder.Services.AddScoped<IAddItemToOrderCommandHandler, AddItemToOrderCommandHandler>();
 builder.Services.AddScoped<IRemoveItemFromOrderCommandHandler, RemoveItemFromOrderCommandHandler>();
