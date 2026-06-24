@@ -6,6 +6,7 @@ using OrderService.Application.UseCases.Orders.Commands.AddItemToOrder;
 using OrderService.Application.UseCases.Orders.Commands.AddNoteToOrder;
 using OrderService.Application.UseCases.Orders.Commands.ChangeOrderStatus;
 using OrderService.Application.UseCases.Orders.Commands.CreateOrder;
+using OrderService.Application.UseCases.Orders.Commands.MarkOrderReadyByKitchen;
 using OrderService.Application.UseCases.Orders.Commands.RemoveItemFromOrder;
 using OrderService.Application.UseCases.Orders.Commands.UpdateItemStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetAllOrders;
@@ -29,6 +30,7 @@ public sealed class OrdersController : ControllerBase
     private readonly IAddItemToOrderCommandHandler _addItemHandler;
     private readonly IRemoveItemFromOrderCommandHandler _removeItemHandler;
     private readonly IChangeOrderStatusCommandHandler _changeStatusHandler;
+    private readonly IMarkOrderReadyByKitchenCommandHandler _markReadyByKitchenHandler;
     private readonly IAddNoteToOrderCommandHandler _addNoteHandler;
     private readonly IUpdateItemStatusCommandHandler _updateItemStatusHandler;
     private readonly IGetAllOrdersQueryHandler _getAllHandler;
@@ -43,6 +45,7 @@ public sealed class OrdersController : ControllerBase
         IAddItemToOrderCommandHandler addItemHandler,
         IRemoveItemFromOrderCommandHandler removeItemHandler,
         IChangeOrderStatusCommandHandler changeStatusHandler,
+        IMarkOrderReadyByKitchenCommandHandler markReadyByKitchenHandler,
         IAddNoteToOrderCommandHandler addNoteHandler,
         IUpdateItemStatusCommandHandler updateItemStatusHandler,
         IGetAllOrdersQueryHandler getAllHandler,
@@ -56,6 +59,7 @@ public sealed class OrdersController : ControllerBase
         _addItemHandler = addItemHandler;
         _removeItemHandler = removeItemHandler;
         _changeStatusHandler = changeStatusHandler;
+        _markReadyByKitchenHandler = markReadyByKitchenHandler;
         _addNoteHandler = addNoteHandler;
         _updateItemStatusHandler = updateItemStatusHandler;
         _getAllHandler = getAllHandler;
@@ -172,6 +176,14 @@ public sealed class OrdersController : ControllerBase
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<OrderResponseDto>> ChangeStatus(Guid id, [FromBody] ChangeStatusRequest req, CancellationToken ct)
         => Ok(await _changeStatusHandler.Handle(new ChangeOrderStatusCommand { OrderId = id, NewStatus = req.NewStatus, ChangedByUserId = GetCurrentUserId() }, ct));
+
+    [HttpPost("{id:guid}/kitchen-ready")]
+    [Authorize(Roles = ApplicationRoles.AdminOrKitchen)]
+    [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<OrderResponseDto>> MarkReadyByKitchen(Guid id, CancellationToken ct)
+        => Ok(await _markReadyByKitchenHandler.Handle(new MarkOrderReadyByKitchenCommand { OrderId = id }, ct));
 
     [HttpPost("{id:guid}/notes")]
     [Authorize(Roles = ApplicationRoles.AdminWaitressOrKitchen)]
