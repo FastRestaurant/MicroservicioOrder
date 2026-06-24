@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
+using OrderService.Domain.Constants;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
@@ -103,7 +104,12 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
             throw;
         }
 
-        await SendToKitchenAsync(order, command.WaiterId, table.Number, orderItems, cancellationToken);
+        var kitchenResult = await SendToKitchenAsync(order, command.WaiterId, table.Number, orderItems, cancellationToken);
+
+        if (kitchenResult.Success)
+            await MarkAsInProgressAsync(order, command.WaiterId, cancellationToken);
+        else
+            _logger.LogWarning("La orden {OrderId} quedo en Open porque no se pudo enviar a la cocina. {Message}", order.Id, kitchenResult.Message);
 
         var createdOrder = await _orderRepository.GetByIdForReadAsync(order.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), order.Id);
@@ -180,7 +186,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         }
     }
 
-    private async Task SendToKitchenAsync(Order order, Guid waiterId, string tableNumber, IEnumerable<OrderItem> items, CancellationToken cancellationToken)
+    private async Task<KitchenEnqueueResultDto> SendToKitchenAsync(Order order, Guid waiterId, string tableNumber, IEnumerable<OrderItem> items, CancellationToken cancellationToken)
     {
         var ticket = new KitchenTicketRequestDto
         {
@@ -203,13 +209,28 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
 
         try
         {
-            var result = await _kitchenClient.EnqueueOrderAsync(ticket, cancellationToken);
-            if (!result.Success)
-                _logger.LogWarning("No se pudo enviar la orden {OrderId} a la cocina. {Message}", order.Id, result.Message);
+            return await _kitchenClient.EnqueueOrderAsync(ticket, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "No se pudo enviar la orden {OrderId} a la cocina.", order.Id);
+            return new KitchenEnqueueResultDto { Success = false, Message = "No se pudo avisar a la cocina en este momento." };
+        }
+    }
+
+    private async Task MarkAsInProgressAsync(Order order, Guid waiterId, CancellationToken cancellationToken)
+    {
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            order.ChangeStatus(OrderStatusIds.InProgress, waiterId);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
         }
     }
 }
