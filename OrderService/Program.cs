@@ -9,6 +9,7 @@ using OrderService.Application.UseCases.Orders.Commands.AddItemToOrder;
 using OrderService.Application.UseCases.Orders.Commands.AddNoteToOrder;
 using OrderService.Application.UseCases.Orders.Commands.ChangeOrderStatus;
 using OrderService.Application.UseCases.Orders.Commands.CreateOrder;
+using OrderService.Application.UseCases.Orders.Commands.MarkOrderReadyByKitchen;
 using OrderService.Application.UseCases.Orders.Commands.RemoveItemFromOrder;
 using OrderService.Application.UseCases.Orders.Commands.UpdateItemStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetAllOrders;
@@ -91,6 +92,7 @@ builder.Services.AddScoped<ICreateOrderCommandHandler, CreateOrderCommandHandler
 builder.Services.AddScoped<IAddItemToOrderCommandHandler, AddItemToOrderCommandHandler>();
 builder.Services.AddScoped<IRemoveItemFromOrderCommandHandler, RemoveItemFromOrderCommandHandler>();
 builder.Services.AddScoped<IChangeOrderStatusCommandHandler, ChangeOrderStatusCommandHandler>();
+builder.Services.AddScoped<IMarkOrderReadyByKitchenCommandHandler, MarkOrderReadyByKitchenCommandHandler>();
 builder.Services.AddScoped<IAddNoteToOrderCommandHandler, AddNoteToOrderCommandHandler>();
 builder.Services.AddScoped<IUpdateItemStatusCommandHandler, UpdateItemStatusCommandHandler>();
 builder.Services.AddScoped<IGetAllOrdersQueryHandler, GetAllOrdersQueryHandler>();
