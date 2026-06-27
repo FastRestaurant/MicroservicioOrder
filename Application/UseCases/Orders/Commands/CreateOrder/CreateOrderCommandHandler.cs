@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
+using OrderService.Application.Realtime;
 using OrderService.Domain.Constants;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
@@ -17,6 +18,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
     private readonly IStockClient _stockClient;
     private readonly IKitchenClient _kitchenClient;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOrderNotifier _orderNotifier;
     private readonly ILogger<CreateOrderCommandHandler> _logger;
 
     public CreateOrderCommandHandler(
@@ -27,6 +29,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         IStockClient stockClient,
         IKitchenClient kitchenClient,
         IUnitOfWork unitOfWork,
+        IOrderNotifier orderNotifier,
         ILogger<CreateOrderCommandHandler> logger)
     {
         _orderRepository = orderRepository;
@@ -36,6 +39,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         _stockClient = stockClient;
         _kitchenClient = kitchenClient;
         _unitOfWork = unitOfWork;
+        _orderNotifier = orderNotifier;
         _logger = logger;
     }
 
@@ -114,7 +118,23 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         var createdOrder = await _orderRepository.GetByIdForReadAsync(order.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), order.Id);
 
-        return OrderMapper.ToResponse(createdOrder);
+        var response = OrderMapper.ToResponse(createdOrder);
+
+        await NotifyOrderCreatedAsync(response, cancellationToken);
+
+        return response;
+    }
+
+    private async Task NotifyOrderCreatedAsync(OrderResponseDto order, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _orderNotifier.NotifyOrderCreatedAsync(order, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo notificar en tiempo real la creacion de la orden {OrderId}.", order.Id);
+        }
     }
 
     private async Task<OrderItem> CreateOrderItemAsync(Guid orderId, CreateOrderItemCommand requestedItem, CancellationToken cancellationToken)

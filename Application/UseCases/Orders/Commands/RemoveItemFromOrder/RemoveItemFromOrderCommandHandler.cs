@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
+using OrderService.Application.Realtime;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
@@ -12,17 +13,20 @@ public sealed class RemoveItemFromOrderCommandHandler : IRemoveItemFromOrderComm
     private readonly IOrderRepository _orderRepository;
     private readonly IStockClient _stockClient;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOrderNotifier _orderNotifier;
     private readonly ILogger<RemoveItemFromOrderCommandHandler> _logger;
 
     public RemoveItemFromOrderCommandHandler(
         IOrderRepository orderRepository,
         IStockClient stockClient,
         IUnitOfWork unitOfWork,
+        IOrderNotifier orderNotifier,
         ILogger<RemoveItemFromOrderCommandHandler> logger)
     {
         _orderRepository = orderRepository;
         _stockClient = stockClient;
         _unitOfWork = unitOfWork;
+        _orderNotifier = orderNotifier;
         _logger = logger;
     }
 
@@ -59,7 +63,23 @@ public sealed class RemoveItemFromOrderCommandHandler : IRemoveItemFromOrderComm
         var updatedOrder = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
-        return OrderMapper.ToResponse(updatedOrder);
+        var response = OrderMapper.ToResponse(updatedOrder);
+
+        await NotifyOrderItemRemovedAsync(response, cancellationToken);
+
+        return response;
+    }
+
+    private async Task NotifyOrderItemRemovedAsync(OrderResponseDto order, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _orderNotifier.NotifyOrderItemRemovedAsync(order, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo notificar en tiempo real el item removido de la orden {OrderId}.", order.Id);
+        }
     }
 
     private async Task ReleaseItemStockAsync(Guid orderId, Guid orderItemId, CancellationToken cancellationToken)

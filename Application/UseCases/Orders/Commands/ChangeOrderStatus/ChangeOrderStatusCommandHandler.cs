@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
+using OrderService.Application.Realtime;
 using OrderService.Domain.Constants;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
@@ -15,6 +16,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
     private readonly IUserServiceClient _userServiceClient;
     private readonly IStockClient _stockClient;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOrderNotifier _orderNotifier;
     private readonly ILogger<ChangeOrderStatusCommandHandler> _logger;
 
     public ChangeOrderStatusCommandHandler(
@@ -23,6 +25,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
         IUserServiceClient userServiceClient,
         IStockClient stockClient,
         IUnitOfWork unitOfWork,
+        IOrderNotifier orderNotifier,
         ILogger<ChangeOrderStatusCommandHandler> logger)
     {
         _orderRepository = orderRepository;
@@ -30,6 +33,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
         _userServiceClient = userServiceClient;
         _stockClient = stockClient;
         _unitOfWork = unitOfWork;
+        _orderNotifier = orderNotifier;
         _logger = logger;
     }
 
@@ -74,7 +78,23 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
         if (newStatus.Id == OrderStatusIds.Cancelled)
             await ReleaseOrderStockAsync(updatedOrder.Id, updatedOrder.Items, cancellationToken);
 
-        return OrderMapper.ToResponse(updatedOrder);
+        var response = OrderMapper.ToResponse(updatedOrder);
+
+        await NotifyOrderStatusChangedAsync(response, cancellationToken);
+
+        return response;
+    }
+
+    private async Task NotifyOrderStatusChangedAsync(OrderResponseDto order, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _orderNotifier.NotifyOrderStatusChangedAsync(order, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo notificar en tiempo real el cambio de estado de la orden {OrderId}.", order.Id);
+        }
     }
 
     private async Task ReleaseOrderStockAsync(Guid orderId, IEnumerable<OrderItem> items, CancellationToken cancellationToken)

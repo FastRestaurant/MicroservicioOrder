@@ -28,7 +28,10 @@ using OrderService.Infrastructure.Persistence.Repositories;
 using OrderService.Infrastructure.ExternalServices;
 using OrderService.Infrastructure.Persistence;
 using OrderService.Presentation.Http;
+using OrderService.Presentation.Hubs;
 using OrderService.Presentation.Middlewares;
+using OrderService.Presentation.Realtime;
+using OrderService.Application.Realtime;
 using System.Security.Claims;
 using System.Text;
 
@@ -43,6 +46,9 @@ builder.Services.AddScoped<ITableRepository, TableRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<AuthorizationHeaderPropagationHandler>();
+
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IOrderNotifier, SignalROrderNotifier>();
 
 builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>((sp, client) =>
 {
@@ -150,6 +156,23 @@ builder.Services
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? string.Empty)),
             RoleClaimType = ClaimTypes.Role
         };
+
+        // SignalR no puede enviar el header Authorization en la conexion WebSocket/SSE,
+        // por lo que el token se acepta tambien como query string (?access_token=...)
+        // unicamente para las solicitudes dirigidas al hub de Orders.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments(OrderHubRoutes.Path))
+                    context.Token = accessToken;
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -202,4 +225,5 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<OrderHub>(OrderHubRoutes.Path);
 app.Run();

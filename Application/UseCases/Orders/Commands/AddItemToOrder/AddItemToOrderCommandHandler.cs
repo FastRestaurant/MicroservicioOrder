@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
+using OrderService.Application.Realtime;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
@@ -14,6 +15,7 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
     private readonly IMenuCatalogClient _menuCatalogClient;
     private readonly IStockClient _stockClient;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOrderNotifier _orderNotifier;
     private readonly ILogger<AddItemToOrderCommandHandler> _logger;
 
     public AddItemToOrderCommandHandler(
@@ -22,6 +24,7 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
         IMenuCatalogClient menuCatalogClient,
         IStockClient stockClient,
         IUnitOfWork unitOfWork,
+        IOrderNotifier orderNotifier,
         ILogger<AddItemToOrderCommandHandler> logger)
     {
         _orderRepository = orderRepository;
@@ -29,6 +32,7 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
         _menuCatalogClient = menuCatalogClient;
         _stockClient = stockClient;
         _unitOfWork = unitOfWork;
+        _orderNotifier = orderNotifier;
         _logger = logger;
     }
 
@@ -95,7 +99,23 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
         var updatedOrder = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
-        return OrderMapper.ToResponse(updatedOrder);
+        var response = OrderMapper.ToResponse(updatedOrder);
+
+        await NotifyOrderItemAddedAsync(response, cancellationToken);
+
+        return response;
+    }
+
+    private async Task NotifyOrderItemAddedAsync(OrderResponseDto order, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _orderNotifier.NotifyOrderItemAddedAsync(order, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo notificar en tiempo real el item agregado a la orden {OrderId}.", order.Id);
+        }
     }
 
     private async Task TryRollbackAsync(CancellationToken cancellationToken)

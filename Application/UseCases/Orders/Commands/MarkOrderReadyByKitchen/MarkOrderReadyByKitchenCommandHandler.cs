@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
+using OrderService.Application.Realtime;
 using OrderService.Domain.Constants;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
@@ -12,15 +14,21 @@ public sealed class MarkOrderReadyByKitchenCommandHandler : IMarkOrderReadyByKit
     private readonly IOrderRepository _orderRepository;
     private readonly IStatusRepository _statusRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOrderNotifier _orderNotifier;
+    private readonly ILogger<MarkOrderReadyByKitchenCommandHandler> _logger;
 
     public MarkOrderReadyByKitchenCommandHandler(
         IOrderRepository orderRepository,
         IStatusRepository statusRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IOrderNotifier orderNotifier,
+        ILogger<MarkOrderReadyByKitchenCommandHandler> logger)
     {
         _orderRepository = orderRepository;
         _statusRepository = statusRepository;
         _unitOfWork = unitOfWork;
+        _orderNotifier = orderNotifier;
+        _logger = logger;
     }
 
     public async Task<OrderResponseDto> Handle(MarkOrderReadyByKitchenCommand command, CancellationToken cancellationToken = default)
@@ -59,6 +67,23 @@ public sealed class MarkOrderReadyByKitchenCommandHandler : IMarkOrderReadyByKit
 
         var updated = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
-        return OrderMapper.ToResponse(updated);
+
+        var response = OrderMapper.ToResponse(updated);
+
+        await NotifyOrderReadyToCloseAsync(response, cancellationToken);
+
+        return response;
+    }
+
+    private async Task NotifyOrderReadyToCloseAsync(OrderResponseDto order, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _orderNotifier.NotifyOrderReadyToCloseAsync(order, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo notificar en tiempo real que la orden {OrderId} esta lista para cerrar.", order.Id);
+        }
     }
 }

@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
+using OrderService.Application.Realtime;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
@@ -11,15 +13,21 @@ public sealed class AddNoteToOrderCommandHandler : IAddNoteToOrderCommandHandler
     private readonly IOrderRepository _orderRepository;
     private readonly IUserServiceClient _userServiceClient;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOrderNotifier _orderNotifier;
+    private readonly ILogger<AddNoteToOrderCommandHandler> _logger;
 
     public AddNoteToOrderCommandHandler(
         IOrderRepository orderRepository,
         IUserServiceClient userServiceClient,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IOrderNotifier orderNotifier,
+        ILogger<AddNoteToOrderCommandHandler> logger)
     {
         _orderRepository = orderRepository;
         _userServiceClient = userServiceClient;
         _unitOfWork = unitOfWork;
+        _orderNotifier = orderNotifier;
+        _logger = logger;
     }
 
     public async Task<OrderResponseDto> Handle(AddNoteToOrderCommand command, CancellationToken cancellationToken = default)
@@ -56,6 +64,22 @@ public sealed class AddNoteToOrderCommandHandler : IAddNoteToOrderCommandHandler
         var updatedOrder = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
-        return OrderMapper.ToResponse(updatedOrder);
+        var response = OrderMapper.ToResponse(updatedOrder);
+
+        await NotifyOrderNoteAddedAsync(response, cancellationToken);
+
+        return response;
+    }
+
+    private async Task NotifyOrderNoteAddedAsync(OrderResponseDto order, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _orderNotifier.NotifyOrderNoteAddedAsync(order, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo notificar en tiempo real la nota agregada a la orden {OrderId}.", order.Id);
+        }
     }
 }
