@@ -50,11 +50,35 @@ builder.Services.AddTransient<AuthorizationHeaderPropagationHandler>();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IOrderNotifier, SignalROrderNotifier>();
 
+const string DevelopmentCorsPolicy = "DevelopmentCorsPolicy";
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy(DevelopmentCorsPolicy, policy =>
+        {
+            policy
+                .SetIsOriginAllowed(origin =>
+                    string.IsNullOrEmpty(origin) ||
+                    origin.Equals("null", StringComparison.OrdinalIgnoreCase) ||
+                    origin.Contains("localhost", StringComparison.OrdinalIgnoreCase))
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+    });
+}
+
 builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>((sp, client) =>
 {
-    var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:Users:BaseUrl"];
-    if (!string.IsNullOrWhiteSpace(baseUrl))
-        client.BaseAddress = new Uri(baseUrl);
+    // TODO-TEMPORAL: comentado porque UserService aun no expone GET /api/v1/users/{id}.
+    // Mientras BaseAddress sea null, UserServiceClient.ExistsAsync devuelve siempre true
+    // (ver Infrastructure/ExternalServices/UserServiceClient.cs). Descomentar en cuanto
+    // el endpoint este disponible en UserService.
+
+    // var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:Users:BaseUrl"];
+    // if (!string.IsNullOrWhiteSpace(baseUrl))
+    //     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(10);
 })
 .AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>()
@@ -157,9 +181,6 @@ builder.Services
             RoleClaimType = ClaimTypes.Role
         };
 
-        // SignalR no puede enviar el header Authorization en la conexion WebSocket/SSE,
-        // por lo que el token se acepta tambien como query string (?access_token=...)
-        // unicamente para las solicitudes dirigidas al hub de Orders.
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -222,6 +243,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+if (app.Environment.IsDevelopment())
+    app.UseCors(DevelopmentCorsPolicy);
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

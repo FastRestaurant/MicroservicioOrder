@@ -5,11 +5,6 @@ using OrderService.Presentation.Hubs;
 
 namespace OrderService.Presentation.Realtime;
 
-/// <summary>
-/// Implementacion concreta de <see cref="IOrderNotifier"/> basada en SignalR.
-/// Traduce cada evento de dominio/aplicacion en un mensaje enviado a los grupos
-/// de rol correspondientes del <see cref="OrderHub"/>.
-/// </summary>
 public sealed class SignalROrderNotifier : IOrderNotifier
 {
     private const string OrderCreatedMethod = "OrderCreated";
