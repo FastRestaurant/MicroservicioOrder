@@ -96,10 +96,7 @@ public class OrderRepository : IOrderRepository
         return (orders, totalCount);
     }
 
-    public async Task AddAsync(Order order, CancellationToken ct = default)
-        => await _context.Orders.AddAsync(order, ct);
-
-    public async Task<bool> HasActiveOrderForTableAsync(Guid tableId, CancellationToken ct = default)
+    public async Task<IReadOnlyCollection<Order>> GetActiveByTableAsync(Guid tableId, CancellationToken ct = default)
     {
         var activeStatuses = new[]
         {
@@ -109,9 +106,17 @@ public class OrderRepository : IOrderRepository
         };
 
         return await _context.Orders
-            .AnyAsync(o => o.TableId == tableId
-                        && activeStatuses.Contains(o.StatusId), ct);
+            .AsNoTracking()
+            .Include(o => o.Table)
+            .Include(o => o.Status)
+            .Include(o => o.Items)
+            .Where(o => o.TableId == tableId && activeStatuses.Contains(o.StatusId))
+            .OrderBy(o => o.CreatedAt)
+            .ToListAsync(ct);
     }
+
+    public async Task AddAsync(Order order, CancellationToken ct = default)
+        => await _context.Orders.AddAsync(order, ct);
 
     public async Task<IReadOnlyDictionary<Guid, string>> GetActiveStatusNamesByTableIdsAsync(
         IEnumerable<Guid> tableIds, CancellationToken ct = default)
@@ -137,7 +142,11 @@ public class OrderRepository : IOrderRepository
 
         return activeOrders
             .GroupBy(order => order.TableId)
-            .ToDictionary(group => group.Key, group => group.First().StatusName);
+            .ToDictionary(
+                group => group.Key,
+                group => group.Any(order => order.StatusName is "Open" or "InProgress")
+                    ? "InProgress"
+                    : "ReadyToClose");
     }
 
     public async Task<IReadOnlyDictionary<Guid, Guid>> GetActiveWaiterIdsByTableIdsAsync(

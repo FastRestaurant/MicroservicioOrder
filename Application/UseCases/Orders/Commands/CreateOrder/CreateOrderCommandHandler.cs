@@ -64,10 +64,6 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         if (!table.IsEnabled)
             throw new DomainException($"La mesa '{table.Number}' está deshabilitada.");
 
-        var tableOccupied = await _orderRepository.HasActiveOrderForTableAsync(command.TableId, cancellationToken);
-        if (tableOccupied)
-            throw new ConflictException($"La mesa '{table.Number}' ya tiene una orden activa. Ciérrela antes de abrir una nueva.");
-
         var order = Order.Create(command.TableId, command.WaiterId);
         var orderItems = new List<OrderItem>();
 

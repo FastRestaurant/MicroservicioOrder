@@ -46,17 +46,6 @@ public class Order
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void RemoveItem(Guid itemId)
-    {
-        EnsureOrderIsModifiable();
-
-        var item = Items.FirstOrDefault(i => i.Id == itemId)
-            ?? throw new DomainException($"El item {itemId} no fue encontrado en la orden.");
-        Items.Remove(item);
-        RecalculateTotal();
-        UpdatedAt = DateTime.UtcNow;
-    }
-
     public OrderStatusHistory ChangeStatus(int newStatusId, Guid changedByUserId)
     {
         if (OrderStatusIds.IsTerminal(StatusId))

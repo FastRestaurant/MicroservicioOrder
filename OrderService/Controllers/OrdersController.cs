@@ -2,13 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
-using OrderService.Application.UseCases.Orders.Commands.AddItemToOrder;
 using OrderService.Application.UseCases.Orders.Commands.AddNoteToOrder;
 using OrderService.Application.UseCases.Orders.Commands.ChangeOrderStatus;
 using OrderService.Application.UseCases.Orders.Commands.CreateOrder;
 using OrderService.Application.UseCases.Orders.Commands.MarkOrderReadyByKitchen;
-using OrderService.Application.UseCases.Orders.Commands.RemoveItemFromOrder;
 using OrderService.Application.UseCases.Orders.Commands.UpdateItemStatus;
+using OrderService.Application.UseCases.Orders.Queries.GetActiveOrdersSummaryByTable;
 using OrderService.Application.UseCases.Orders.Queries.GetAllOrders;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderById;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderItemStatuses;
@@ -27,8 +26,6 @@ namespace OrderService.Presentation.Controllers;
 public sealed class OrdersController : ControllerBase
 {
     private readonly ICreateOrderCommandHandler _createOrderHandler;
-    private readonly IAddItemToOrderCommandHandler _addItemHandler;
-    private readonly IRemoveItemFromOrderCommandHandler _removeItemHandler;
     private readonly IChangeOrderStatusCommandHandler _changeStatusHandler;
     private readonly IMarkOrderReadyByKitchenCommandHandler _markReadyByKitchenHandler;
     private readonly IAddNoteToOrderCommandHandler _addNoteHandler;
@@ -39,11 +36,10 @@ public sealed class OrdersController : ControllerBase
     private readonly IGetOrdersByTableQueryHandler _getByTableHandler;
     private readonly IGetOrderStatusesQueryHandler _getOrderStatusesHandler;
     private readonly IGetOrderItemStatusesQueryHandler _getOrderItemStatusesHandler;
+    private readonly IGetActiveOrdersSummaryByTableQueryHandler _getActiveSummaryByTableHandler;
 
     public OrdersController(
         ICreateOrderCommandHandler createOrderHandler,
-        IAddItemToOrderCommandHandler addItemHandler,
-        IRemoveItemFromOrderCommandHandler removeItemHandler,
         IChangeOrderStatusCommandHandler changeStatusHandler,
         IMarkOrderReadyByKitchenCommandHandler markReadyByKitchenHandler,
         IAddNoteToOrderCommandHandler addNoteHandler,
@@ -53,11 +49,10 @@ public sealed class OrdersController : ControllerBase
         IGetOrderByIdQueryHandler getByIdHandler,
         IGetOrdersByTableQueryHandler getByTableHandler,
         IGetOrderStatusesQueryHandler getOrderStatusesHandler,
-        IGetOrderItemStatusesQueryHandler getOrderItemStatusesHandler)
+        IGetOrderItemStatusesQueryHandler getOrderItemStatusesHandler,
+        IGetActiveOrdersSummaryByTableQueryHandler getActiveSummaryByTableHandler)
     {
         _createOrderHandler = createOrderHandler;
-        _addItemHandler = addItemHandler;
-        _removeItemHandler = removeItemHandler;
         _changeStatusHandler = changeStatusHandler;
         _markReadyByKitchenHandler = markReadyByKitchenHandler;
         _addNoteHandler = addNoteHandler;
@@ -68,6 +63,7 @@ public sealed class OrdersController : ControllerBase
         _getByTableHandler = getByTableHandler;
         _getOrderStatusesHandler = getOrderStatusesHandler;
         _getOrderItemStatusesHandler = getOrderItemStatusesHandler;
+        _getActiveSummaryByTableHandler = getActiveSummaryByTableHandler;
     }
 
     [HttpGet]
@@ -119,6 +115,14 @@ public sealed class OrdersController : ControllerBase
          Page = query.Page,
          PageSize = query.PageSize
      }, ct));
+
+    [HttpGet("table/{tableId:guid}/active-summary")]
+    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
+    [ProducesResponseType(typeof(TableOrdersSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<TableOrdersSummaryDto>> GetActiveSummaryByTable(Guid tableId, CancellationToken ct)
+        => Ok(await _getActiveSummaryByTableHandler.Handle(new GetActiveOrdersSummaryByTableQuery { TableId = tableId }, ct));
+
     [HttpPost]
     [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
     [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status201Created)]
@@ -142,32 +146,6 @@ public sealed class OrdersController : ControllerBase
         var result = await _createOrderHandler.Handle(command, ct);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
-
-    [HttpPost("{id:guid}/items")]
-    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
-    [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OrderResponseDto>> AddItem(Guid id, [FromBody] AddItemRequest req, CancellationToken ct)
-    {
-        var cmd = new AddItemToOrderCommand
-        {
-            OrderId = id,
-            ProductId = req.ProductId,
-            ProductType = req.ProductType,
-            Quantity = req.Quantity,
-            Notes = req.Notes
-        };
-        return Ok(await _addItemHandler.Handle(cmd, ct));
-    }
-
-    [HttpDelete("{id:guid}/items/{itemId:guid}")]
-    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
-    [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OrderResponseDto>> RemoveItem(Guid id, Guid itemId, CancellationToken ct)
-        => Ok(await _removeItemHandler.Handle(new RemoveItemFromOrderCommand { OrderId = id, ItemId = itemId }, ct));
 
     [HttpPatch("{id:guid}/status")]
     [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]

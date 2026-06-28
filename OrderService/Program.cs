@@ -5,14 +5,13 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
-using OrderService.Application.UseCases.Orders.Commands.AddItemToOrder;
 using OrderService.Application.UseCases.Orders.Commands.AddNoteToOrder;
 using OrderService.Application.UseCases.Orders.Commands.ChangeOrderStatus;
 using OrderService.Application.UseCases.Orders.Commands.CreateOrder;
 using OrderService.Application.UseCases.Orders.Commands.MarkOrderReadyByKitchen;
-using OrderService.Application.UseCases.Orders.Commands.RemoveItemFromOrder;
 using OrderService.Application.UseCases.Orders.Commands.UpdateItemStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetAllOrders;
+using OrderService.Application.UseCases.Orders.Queries.GetActiveOrdersSummaryByTable;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderById;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderItemStatuses;
 using OrderService.Application.UseCases.Orders.Queries.GetOrdersByStatus;
@@ -111,8 +110,6 @@ builder.Services.AddHttpClient<IKitchenClient, KitchenClient>((sp, client) =>
 .AddPolicyHandler(HttpResiliencePolicies.CircuitBreaker);
 
 builder.Services.AddScoped<ICreateOrderCommandHandler, CreateOrderCommandHandler>();
-builder.Services.AddScoped<IAddItemToOrderCommandHandler, AddItemToOrderCommandHandler>();
-builder.Services.AddScoped<IRemoveItemFromOrderCommandHandler, RemoveItemFromOrderCommandHandler>();
 builder.Services.AddScoped<IChangeOrderStatusCommandHandler, ChangeOrderStatusCommandHandler>();
 builder.Services.AddScoped<IMarkOrderReadyByKitchenCommandHandler, MarkOrderReadyByKitchenCommandHandler>();
 builder.Services.AddScoped<IAddNoteToOrderCommandHandler, AddNoteToOrderCommandHandler>();
@@ -120,6 +117,7 @@ builder.Services.AddScoped<IUpdateItemStatusCommandHandler, UpdateItemStatusComm
 builder.Services.AddScoped<IGetAllOrdersQueryHandler, GetAllOrdersQueryHandler>();
 builder.Services.AddScoped<IGetOrdersByStatusQueryHandler, GetOrdersByStatusQueryHandler>();
 builder.Services.AddScoped<IGetOrdersByTableQueryHandler, GetOrdersByTableQueryHandler>();
+builder.Services.AddScoped<IGetActiveOrdersSummaryByTableQueryHandler, GetActiveOrdersSummaryByTableQueryHandler>();
 builder.Services.AddScoped<IGetOrderStatusesQueryHandler, GetOrderStatusesQueryHandler>();
 builder.Services.AddScoped<IGetOrderItemStatusesQueryHandler, GetOrderItemStatusesQueryHandler>();
 builder.Services.AddScoped<IGetAllTablesQueryHandler, GetAllTablesQueryHandler>();
