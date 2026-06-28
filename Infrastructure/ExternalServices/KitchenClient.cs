@@ -21,7 +21,7 @@ public sealed class KitchenClient : IKitchenClient
         HttpResponseMessage response;
         try
         {
-            response = await _httpClient.PostAsJsonAsync("api/KitchenOrders", request, cancellationToken);
+            response = await _httpClient.PostAsJsonAsync("api/v1/kitchenOrders", request, cancellationToken);
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
