@@ -74,7 +74,7 @@ public sealed class RemoveItemFromOrderCommandHandler : IRemoveItemFromOrderComm
     {
         try
         {
-            await _orderNotifier.NotifyOrderItemRemovedAsync(order, cancellationToken);
+            await _orderNotifier.NotifyOrderItemRemovedAsync(order, CancellationToken.None);
         }
         catch (Exception ex)
         {

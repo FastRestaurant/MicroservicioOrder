@@ -110,7 +110,7 @@ public sealed class AddItemToOrderCommandHandler : IAddItemToOrderCommandHandler
     {
         try
         {
-            await _orderNotifier.NotifyOrderItemAddedAsync(order, cancellationToken);
+            await _orderNotifier.NotifyOrderItemAddedAsync(order, CancellationToken.None);
         }
         catch (Exception ex)
         {

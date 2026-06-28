@@ -79,7 +79,7 @@ public sealed class MarkOrderReadyByKitchenCommandHandler : IMarkOrderReadyByKit
     {
         try
         {
-            await _orderNotifier.NotifyOrderReadyToCloseAsync(order, cancellationToken);
+            await _orderNotifier.NotifyOrderReadyToCloseAsync(order, CancellationToken.None);
         }
         catch (Exception ex)
         {

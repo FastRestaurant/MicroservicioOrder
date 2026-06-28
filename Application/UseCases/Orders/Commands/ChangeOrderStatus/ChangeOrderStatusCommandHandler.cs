@@ -89,7 +89,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
     {
         try
         {
-            await _orderNotifier.NotifyOrderStatusChangedAsync(order, cancellationToken);
+            await _orderNotifier.NotifyOrderStatusChangedAsync(order, CancellationToken.None);
         }
         catch (Exception ex)
         {

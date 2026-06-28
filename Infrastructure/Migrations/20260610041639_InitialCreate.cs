@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class newMigration : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,10 +32,7 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Number = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    SeatCount = table.Column<int>(type: "int", nullable: false),
-                    Location = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false),
-                    IsEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    Version = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                    Status = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -202,11 +199,9 @@ namespace Infrastructure.Migrations
                 column: "StatusId");
 
             migrationBuilder.CreateIndex(
-                name: "UX_Orders_Active_TableId",
+                name: "IX_Orders_TableId",
                 table: "Orders",
-                column: "TableId",
-                unique: true,
-                filter: "[StatusId] IN (1, 2, 3)");
+                column: "TableId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrderStatusHistories_NewStatusId",

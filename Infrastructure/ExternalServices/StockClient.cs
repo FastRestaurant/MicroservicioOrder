@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Text.Json;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 
@@ -41,7 +40,7 @@ public sealed class StockClient : IStockClient
 
         using var _ = response;
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        var result = Deserialize<StockOperationResultDto>(content);
+        var result = HttpResultReader.Deserialize<StockOperationResultDto>(content);
 
         if (result is not null)
         {
@@ -60,7 +59,7 @@ public sealed class StockClient : IStockClient
 
         if (!response.IsSuccessStatusCode)
         {
-            var error = Deserialize<ErrorResponseDto>(content);
+            var error = HttpResultReader.Deserialize<ErrorResponseDto>(content);
             return new StockOperationResultDto
             {
                 Success = false,
@@ -71,23 +70,5 @@ public sealed class StockClient : IStockClient
         }
 
         return new StockOperationResultDto { Success = false, Message = "No se pudo confirmar la operacion de stock." };
-    }
-
-    private static T? Deserialize<T>(string content)
-    {
-        if (string.IsNullOrWhiteSpace(content))
-            return default;
-
-        try
-        {
-            return JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-        }
-        catch (JsonException)
-        {
-            return default;
-        }
     }
 }

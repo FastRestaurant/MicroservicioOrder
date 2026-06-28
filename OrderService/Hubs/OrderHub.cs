@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using OrderService.Presentation.Authorization;
 
 namespace OrderService.Presentation.Hubs;
@@ -8,38 +9,48 @@ namespace OrderService.Presentation.Hubs;
 [Authorize]
 public sealed class OrderHub : Hub
 {
+    private readonly ILogger<OrderHub> _logger;
+
+    public OrderHub(ILogger<OrderHub> logger)
+    {
+        _logger = logger;
+    }
+
     public override async Task OnConnectedAsync()
     {
-        foreach (var group in ResolveGroupsForCurrentUser())
+        var groups = ResolveGroupsForCurrentUser();
+
+        if (groups.Count == 0)
+            _logger.LogWarning(
+                "La conexion {ConnectionId} del usuario {UserIdentifier} no resolvio ningun grupo de rol y no recibira eventos en tiempo real.",
+                Context.ConnectionId,
+                Context.UserIdentifier);
+
+        foreach (var group in groups)
             await Groups.AddToGroupAsync(Context.ConnectionId, group);
 
         await base.OnConnectedAsync();
     }
 
-    public override async Task OnDisconnectedAsync(Exception? exception)
-    {
-        foreach (var group in ResolveGroupsForCurrentUser())
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, group);
-
-        await base.OnDisconnectedAsync(exception);
-    }
-
-    private IEnumerable<string> ResolveGroupsForCurrentUser()
+    private List<string> ResolveGroupsForCurrentUser()
     {
         var roles = Context.User?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToHashSet() ?? [];
+        var groups = new List<string>();
 
         if (roles.Contains(ApplicationRoles.Admin))
         {
-            yield return OrderHubGroups.Admin;
-            yield return OrderHubGroups.Waitress;
-            yield return OrderHubGroups.Kitchen;
-            yield break;
+            groups.Add(OrderHubGroups.Admin);
+            groups.Add(OrderHubGroups.Waitress);
+            groups.Add(OrderHubGroups.Kitchen);
+            return groups;
         }
 
         if (roles.Contains(ApplicationRoles.Waitress))
-            yield return OrderHubGroups.Waitress;
+            groups.Add(OrderHubGroups.Waitress);
 
         if (roles.Contains(ApplicationRoles.Kitchen))
-            yield return OrderHubGroups.Kitchen;
+            groups.Add(OrderHubGroups.Kitchen);
+
+        return groups;
     }
 }

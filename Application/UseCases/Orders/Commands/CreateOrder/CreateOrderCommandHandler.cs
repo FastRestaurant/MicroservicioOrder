@@ -129,7 +129,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
     {
         try
         {
-            await _orderNotifier.NotifyOrderCreatedAsync(order, cancellationToken);
+            await _orderNotifier.NotifyOrderCreatedAsync(order, CancellationToken.None);
         }
         catch (Exception ex)
         {

@@ -12,8 +12,8 @@ using OrderService.Infrastructure.Persistence;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260626044536_newMigration")]
-    partial class newMigration
+    [Migration("20260615185356_AddTableDetails")]
+    partial class AddTableDetails
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -28,6 +28,7 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("OrderService.Domain.Entities.Order", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("ClosedAt")
@@ -61,10 +62,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("StatusId");
 
-                    b.HasIndex("TableId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Orders_Active_TableId")
-                        .HasFilter("[StatusId] IN (1, 2, 3)");
+                    b.HasIndex("TableId");
 
                     b.ToTable("Orders", (string)null);
                 });
@@ -72,6 +70,7 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("OrderService.Domain.Entities.OrderItem", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
@@ -130,6 +129,7 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("OrderService.Domain.Entities.OrderNote", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
@@ -156,6 +156,7 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("OrderService.Domain.Entities.OrderStatusHistory", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("ChangedAt")
@@ -272,6 +273,7 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("OrderService.Domain.Entities.Table", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsEnabled")
@@ -289,12 +291,6 @@ namespace Infrastructure.Migrations
 
                     b.Property<int>("SeatCount")
                         .HasColumnType("int");
-
-                    b.Property<byte[]>("Version")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.HasKey("Id");
 
