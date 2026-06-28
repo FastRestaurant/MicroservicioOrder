@@ -15,6 +15,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
     private readonly IStatusRepository _statusRepository;
     private readonly IUserServiceClient _userServiceClient;
     private readonly IStockClient _stockClient;
+    private readonly IKitchenClient _kitchenClient;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IOrderNotifier _orderNotifier;
     private readonly ILogger<ChangeOrderStatusCommandHandler> _logger;
@@ -24,6 +25,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
         IStatusRepository statusRepository,
         IUserServiceClient userServiceClient,
         IStockClient stockClient,
+        IKitchenClient kitchenClient,
         IUnitOfWork unitOfWork,
         IOrderNotifier orderNotifier,
         ILogger<ChangeOrderStatusCommandHandler> logger)
@@ -32,6 +34,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
         _statusRepository = statusRepository;
         _userServiceClient = userServiceClient;
         _stockClient = stockClient;
+        _kitchenClient = kitchenClient;
         _unitOfWork = unitOfWork;
         _orderNotifier = orderNotifier;
         _logger = logger;
@@ -57,6 +60,15 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
 
         var order = await _orderRepository.GetByIdForUpdateAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
+
+        if (newStatus.Id == OrderStatusIds.Cancelled)
+        {
+            var kitchenResult = await _kitchenClient.CancelByOrderIdAsync(order.Id, cancellationToken);
+            if (kitchenResult.Blocked)
+                throw new ConflictException(kitchenResult.Message ?? "No se puede cancelar la orden porque la cocina ya comenzo a prepararla.");
+            if (!kitchenResult.Success)
+                throw new DomainException(kitchenResult.Message ?? "No se pudo cancelar la orden en la cocina.");
+        }
 
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try

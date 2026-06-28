@@ -5,4 +5,6 @@ namespace OrderService.Application.Interfaces;
 public interface IKitchenClient
 {
     Task<KitchenEnqueueResultDto> EnqueueOrderAsync(KitchenTicketRequestDto request, CancellationToken cancellationToken = default);
+
+    Task<KitchenCancelResultDto> CancelByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default);
 }
