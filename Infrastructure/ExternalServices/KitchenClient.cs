@@ -53,13 +53,13 @@ public sealed class KitchenClient : IKitchenClient
 
         if (!response.IsSuccessStatusCode)
         {
-            var error = HttpResultReader.Deserialize<ErrorResponseDto>(content);
+            var error = HttpResultReader.ReadErrorMessage(content);
             return new KitchenEnqueueResultDto
             {
                 Success = false,
-                Message = string.IsNullOrWhiteSpace(error?.Message)
+                Message = string.IsNullOrWhiteSpace(error)
                     ? "No se pudo enviar el pedido a la cocina."
-                    : error.Message
+                    : error
             };
         }
 

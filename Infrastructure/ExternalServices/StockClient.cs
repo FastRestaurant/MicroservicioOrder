@@ -59,13 +59,13 @@ public sealed class StockClient : IStockClient
 
         if (!response.IsSuccessStatusCode)
         {
-            var error = HttpResultReader.Deserialize<ErrorResponseDto>(content);
+            var error = HttpResultReader.ReadErrorMessage(content);
             return new StockOperationResultDto
             {
                 Success = false,
-                Message = string.IsNullOrWhiteSpace(error?.Message)
+                Message = string.IsNullOrWhiteSpace(error)
                     ? "No se pudo verificar el stock del producto."
-                    : error.Message
+                    : error
             };
         }
 
