@@ -57,6 +57,8 @@ public sealed class GetAllTablesQueryHandler : IGetAllTablesQueryHandler
         IsEnabled = table.IsEnabled,
         OperationalStatus = GetOperationalStatus(table, activeStatusesByTableId),
         ActiveWaiterId = activeWaiterIdsByTableId.TryGetValue(table.Id, out var waiterId) ? waiterId : null,
+        PositionX = table.PositionX,
+        PositionY = table.PositionY,
         Version = table.Version
     };
 

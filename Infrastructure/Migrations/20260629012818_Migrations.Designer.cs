@@ -12,8 +12,8 @@ using OrderService.Infrastructure.Persistence;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260626044536_newMigration")]
-    partial class newMigration
+    [Migration("20260629012818_Migrations")]
+    partial class Migrations
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -286,6 +286,12 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("PositionX")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal?>("PositionY")
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<int>("SeatCount")
                         .HasColumnType("int");

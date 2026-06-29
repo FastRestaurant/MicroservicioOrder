@@ -3,32 +3,30 @@ using OrderService.Application.Interfaces;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
-namespace OrderService.Application.UseCases.Tables.Commands.CreateTable;
+namespace OrderService.Application.UseCases.Tables.Commands.UpdateTablePosition;
 
-public sealed class CreateTableCommandHandler : ICreateTableCommandHandler
+public sealed class UpdateTablePositionCommandHandler : IUpdateTablePositionCommandHandler
 {
     private readonly ITableRepository _tableRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateTableCommandHandler(ITableRepository tableRepository, IUnitOfWork unitOfWork)
+    public UpdateTablePositionCommandHandler(ITableRepository tableRepository, IUnitOfWork unitOfWork)
     {
         _tableRepository = tableRepository;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<TableResponseDto> Handle(
-        CreateTableCommand command, CancellationToken cancellationToken = default)
+        UpdateTablePositionCommand command,
+        CancellationToken cancellationToken = default)
     {
-        var number = command.Number?.Trim() ?? string.Empty;
-        var location = command.Location?.Trim() ?? string.Empty;
+        if (command.TableId == Guid.Empty)
+            throw new ValidationException("El id de la mesa es obligatorio.");
 
-        var table = Table.Create(number, command.SeatCount, location, command.IsEnabled);
+        var table = await _tableRepository.GetByIdAsync(command.TableId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Table), command.TableId);
 
-        var existing = await _tableRepository.GetByNumberAsync(number, cancellationToken);
-        if (existing is not null)
-            throw new DomainException($"Ya existe una mesa con el número '{number}'.");
-
-        await _tableRepository.AddAsync(table, cancellationToken);
+        table.UpdatePosition(command.PositionX, command.PositionY);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new TableResponseDto

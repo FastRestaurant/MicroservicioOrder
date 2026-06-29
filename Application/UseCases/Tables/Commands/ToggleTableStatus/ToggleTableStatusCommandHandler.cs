@@ -38,6 +38,8 @@ public sealed class ToggleTableStatusCommandHandler : IToggleTableStatusCommandH
             Location = table.Location,
             IsEnabled = table.IsEnabled,
             OperationalStatus = table.IsEnabled ? "Libre" : "Deshabilitada",
+            PositionX = table.PositionX,
+            PositionY = table.PositionY,
             Version = table.Version
         };
     }

@@ -6,6 +6,7 @@ using OrderService.Application.UseCases.Tables.Commands.CreateTable;
 using OrderService.Application.UseCases.Tables.Commands.DeleteTable;
 using OrderService.Application.UseCases.Tables.Commands.ToggleTableStatus;
 using OrderService.Application.UseCases.Tables.Commands.UpdateTable;
+using OrderService.Application.UseCases.Tables.Commands.UpdateTablePosition;
 using OrderService.Application.UseCases.Tables.Queries.GetAllTables;
 using OrderService.Application.UseCases.Tables.Queries.GetTableById;
 using OrderService.Presentation.Authorization;
@@ -22,6 +23,7 @@ public sealed class TablesController : ControllerBase
     private readonly ICreateTableCommandHandler _createHandler;
     private readonly IDeleteTableCommandHandler _deleteHandler;
     private readonly IUpdateTableCommandHandler _updateHandler;
+    private readonly IUpdateTablePositionCommandHandler _updatePositionHandler;
     private readonly IToggleTableStatusCommandHandler _toggleHandler;
 
     public TablesController(
@@ -30,6 +32,7 @@ public sealed class TablesController : ControllerBase
         ICreateTableCommandHandler createHandler,
         IDeleteTableCommandHandler deleteHandler,
         IUpdateTableCommandHandler updateHandler,
+        IUpdateTablePositionCommandHandler updatePositionHandler,
         IToggleTableStatusCommandHandler toggleHandler)
     {
         _getAllHandler = getAllHandler;
@@ -37,6 +40,7 @@ public sealed class TablesController : ControllerBase
         _createHandler = createHandler;
         _deleteHandler = deleteHandler;
         _updateHandler = updateHandler;
+        _updatePositionHandler = updatePositionHandler;
         _toggleHandler = toggleHandler;
     }
 
@@ -83,6 +87,22 @@ public sealed class TablesController : ControllerBase
             Location = req.Location,
             IsEnabled = req.IsEnabled
         }, ct));
+
+    [HttpPatch("{id:guid}/position")]
+    [Authorize(Roles = ApplicationRoles.AdminOrWaitress)]
+    [ProducesResponseType(typeof(TableResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TableResponseDto>> UpdatePosition(
+        Guid id,
+        [FromBody] UpdateTablePositionRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await _updatePositionHandler.Handle(new UpdateTablePositionCommand
+        {
+            TableId = id,
+            PositionX = request.PositionX,
+            PositionY = request.PositionY
+        }, cancellationToken));
 
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = ApplicationRoles.Admin)]

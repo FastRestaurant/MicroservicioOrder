@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class newMigration : Migration
+    public partial class Migrations : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -35,6 +35,8 @@ namespace Infrastructure.Migrations
                     SeatCount = table.Column<int>(type: "int", nullable: false),
                     Location = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false),
                     IsEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    PositionX = table.Column<decimal>(type: "decimal(5,2)", nullable: true),
+                    PositionY = table.Column<decimal>(type: "decimal(5,2)", nullable: true),
                     Version = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>

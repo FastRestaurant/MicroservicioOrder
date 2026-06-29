@@ -284,6 +284,12 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<decimal?>("PositionX")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal?>("PositionY")
+                        .HasColumnType("decimal(5,2)");
+
                     b.Property<int>("SeatCount")
                         .HasColumnType("int");
 

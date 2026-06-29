@@ -9,6 +9,8 @@ public class Table
     public int SeatCount { get; private set; }
     public string Location { get; private set; } = string.Empty;
     public bool IsEnabled { get; private set; }
+    public decimal? PositionX { get; private set; }
+    public decimal? PositionY { get; private set; }
     public byte[] Version { get; private set; } = [];
 
     private Table() { }
@@ -37,6 +39,15 @@ public class Table
 
     public void Enable() => IsEnabled = true;
     public void Disable() => IsEnabled = false;
+
+    public void UpdatePosition(decimal positionX, decimal positionY)
+    {
+        if (positionX is < 0 or > 100 || positionY is < 0 or > 100)
+            throw new ValidationException("Las coordenadas de la mesa deben estar entre 0 y 100.");
+
+        PositionX = positionX;
+        PositionY = positionY;
+    }
 
     private static void Validate(string number, int seatCount, string location)
     {
