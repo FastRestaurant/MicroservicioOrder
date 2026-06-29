@@ -16,7 +16,7 @@ public sealed class UserServiceClient : IUserServiceClient
     public async Task<bool> ExistsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         if (_httpClient.BaseAddress is null)
-            return true;
+            throw new DomainException("El servicio de usuarios no esta configurado.");
 
         try
         {

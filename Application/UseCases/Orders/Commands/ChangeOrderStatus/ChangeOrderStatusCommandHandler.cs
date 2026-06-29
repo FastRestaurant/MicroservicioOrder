@@ -56,7 +56,7 @@ public sealed class ChangeOrderStatusCommandHandler : IChangeOrderStatusCommandH
             throw new NotFoundException("User", command.ChangedByUserId);
 
         var newStatus = await _statusRepository.GetByNameAsync(command.NewStatus, StatusTypes.Order, cancellationToken)
-            ?? throw new DomainException($"'{command.NewStatus}' no es un estado valido para una orden.");
+            ?? throw new DomainException("El estado solicitado no es válido para el pedido.");
 
         var order = await _orderRepository.GetByIdForUpdateAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);

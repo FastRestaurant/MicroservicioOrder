@@ -12,21 +12,15 @@ namespace OrderService.Application.UseCases.Orders.Commands.MarkOrderReadyByKitc
 public sealed class MarkOrderReadyByKitchenCommandHandler : IMarkOrderReadyByKitchenCommandHandler
 {
     private readonly IOrderRepository _orderRepository;
-    private readonly IStatusRepository _statusRepository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IOrderNotifier _orderNotifier;
     private readonly ILogger<MarkOrderReadyByKitchenCommandHandler> _logger;
 
     public MarkOrderReadyByKitchenCommandHandler(
         IOrderRepository orderRepository,
-        IStatusRepository statusRepository,
-        IUnitOfWork unitOfWork,
         IOrderNotifier orderNotifier,
         ILogger<MarkOrderReadyByKitchenCommandHandler> logger)
     {
         _orderRepository = orderRepository;
-        _statusRepository = statusRepository;
-        _unitOfWork = unitOfWork;
         _orderNotifier = orderNotifier;
         _logger = logger;
     }
@@ -36,50 +30,27 @@ public sealed class MarkOrderReadyByKitchenCommandHandler : IMarkOrderReadyByKit
         if (command.OrderId == Guid.Empty)
             throw new ValidationException("El id de la orden es obligatorio.");
 
-        var readyToClose = await _statusRepository.GetByNameAsync("ReadyToClose", StatusTypes.Order, cancellationToken)
-            ?? throw new DomainException("'ReadyToClose' no es un estado valido para una orden.");
-
-        var order = await _orderRepository.GetByIdForUpdateAsync(command.OrderId, cancellationToken)
+        var order = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), command.OrderId);
 
-        if (order.StatusId == OrderStatusIds.ReadyToClose)
-        {
-            var alreadyReady = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
-                ?? throw new NotFoundException(nameof(Order), command.OrderId);
-            return OrderMapper.ToResponse(alreadyReady);
-        }
+        if (order.StatusId is OrderStatusIds.Closed or OrderStatusIds.Cancelled)
+            return OrderMapper.ToResponse(order);
 
-        if (order.StatusId != OrderStatusIds.InProgress)
-            throw new ConflictException($"La orden {command.OrderId} no se puede marcar como lista desde el estado actual ('{order.StatusId}'). Debe estar en preparacion.");
+        var response = OrderMapper.ToResponse(order);
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
-        try
-        {
-            order.ChangeStatus(readyToClose.Id, SystemActors.KitchenService);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-            throw;
-        }
-
-        var updated = await _orderRepository.GetByIdForReadAsync(command.OrderId, cancellationToken)
-            ?? throw new NotFoundException(nameof(Order), command.OrderId);
-
-        var response = OrderMapper.ToResponse(updated);
-
-        await NotifyOrderReadyToCloseAsync(response, cancellationToken);
+        await NotifyOrderFinishedAsync(response, command.WasDelayed, cancellationToken);
 
         return response;
     }
 
-    private async Task NotifyOrderReadyToCloseAsync(OrderResponseDto order, CancellationToken cancellationToken)
+    private async Task NotifyOrderFinishedAsync(OrderResponseDto order, bool wasDelayed, CancellationToken cancellationToken)
     {
         try
         {
-            await _orderNotifier.NotifyOrderReadyToCloseAsync(order, CancellationToken.None);
+            if (wasDelayed)
+                await _orderNotifier.NotifyOrderDelayedAsync(order, CancellationToken.None);
+            else
+                await _orderNotifier.NotifyOrderReadyToCloseAsync(order, CancellationToken.None);
         }
         catch (Exception ex)
         {

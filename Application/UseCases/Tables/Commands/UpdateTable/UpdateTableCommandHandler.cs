@@ -8,11 +8,16 @@ namespace OrderService.Application.UseCases.Tables.Commands.UpdateTable;
 public sealed class UpdateTableCommandHandler : IUpdateTableCommandHandler
 {
     private readonly ITableRepository _tableRepository;
+    private readonly IOrderRepository _orderRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public UpdateTableCommandHandler(ITableRepository tableRepository, IUnitOfWork unitOfWork)
+    public UpdateTableCommandHandler(
+        ITableRepository tableRepository,
+        IOrderRepository orderRepository,
+        IUnitOfWork unitOfWork)
     {
         _tableRepository = tableRepository;
+        _orderRepository = orderRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -30,6 +35,13 @@ public sealed class UpdateTableCommandHandler : IUpdateTableCommandHandler
         var existing = await _tableRepository.GetByNumberAsync(number, cancellationToken);
         if (existing is not null && existing.Id != command.Id)
             throw new DomainException($"Ya existe una mesa con el número '{number}'.");
+
+        if (table.IsEnabled && !command.IsEnabled)
+        {
+            var activeOrders = await _orderRepository.GetActiveByTableAsync(command.Id, cancellationToken);
+            if (activeOrders.Count > 0)
+                throw new DomainException("No se puede deshabilitar una mesa con pedidos activos.");
+        }
 
         table.Update(number, command.SeatCount, location, command.IsEnabled);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -8,11 +8,16 @@ namespace OrderService.Application.UseCases.Tables.Commands.ToggleTableStatus;
 public sealed class ToggleTableStatusCommandHandler : IToggleTableStatusCommandHandler
 {
     private readonly ITableRepository _tableRepository;
+    private readonly IOrderRepository _orderRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public ToggleTableStatusCommandHandler(ITableRepository tableRepository, IUnitOfWork unitOfWork)
+    public ToggleTableStatusCommandHandler(
+        ITableRepository tableRepository,
+        IOrderRepository orderRepository,
+        IUnitOfWork unitOfWork)
     {
         _tableRepository = tableRepository;
+        _orderRepository = orderRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -24,6 +29,13 @@ public sealed class ToggleTableStatusCommandHandler : IToggleTableStatusCommandH
 
         var table = await _tableRepository.GetByIdAsync(command.TableId, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.TableId);
+
+        if (!command.Enable)
+        {
+            var activeOrders = await _orderRepository.GetActiveByTableAsync(command.TableId, cancellationToken);
+            if (activeOrders.Count > 0)
+                throw new DomainException("No se puede deshabilitar una mesa con pedidos activos.");
+        }
 
         if (command.Enable) table.Enable();
         else table.Disable();

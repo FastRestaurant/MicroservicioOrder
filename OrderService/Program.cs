@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
+using OrderService.Application.UseCases.Orders.Commands.AddOrderItem;
 using OrderService.Application.UseCases.Orders.Commands.AddNoteToOrder;
 using OrderService.Application.UseCases.Orders.Commands.ChangeOrderStatus;
 using OrderService.Application.UseCases.Orders.Commands.CreateOrder;
@@ -14,6 +15,7 @@ using OrderService.Application.UseCases.Orders.Queries.GetAllOrders;
 using OrderService.Application.UseCases.Orders.Queries.GetActiveOrdersSummaryByTable;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderById;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderItemStatuses;
+using OrderService.Application.UseCases.Orders.Queries.GetReadyDeliveryOrders;
 using OrderService.Application.UseCases.Orders.Queries.GetOrdersByStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetOrdersByTable;
 using OrderService.Application.UseCases.Orders.Queries.GetOrderStatuses;
@@ -68,8 +70,10 @@ builder.Services.AddCors(options =>
 builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>((sp, client) =>
 {
     var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:Users:BaseUrl"];
-    if (!string.IsNullOrWhiteSpace(baseUrl))
-        client.BaseAddress = new Uri(baseUrl);
+    if (string.IsNullOrWhiteSpace(baseUrl))
+        throw new InvalidOperationException("Falta la configuracion ExternalServices:Users:BaseUrl");
+
+    client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(10);
 })
 .AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>()
@@ -103,21 +107,22 @@ builder.Services.AddHttpClient<IKitchenClient, KitchenClient>((sp, client) =>
     var baseUrl = sp.GetRequiredService<IConfiguration>()["ExternalServices:Kitchen:BaseUrl"];
     if (!string.IsNullOrWhiteSpace(baseUrl))
         client.BaseAddress = new Uri(baseUrl);
-    client.Timeout = TimeSpan.FromSeconds(5);
+    client.Timeout = TimeSpan.FromSeconds(2);
 })
 .AddHttpMessageHandler<AuthorizationHeaderPropagationHandler>()
-.AddPolicyHandler(HttpResiliencePolicies.Retry)
 .AddPolicyHandler(HttpResiliencePolicies.CircuitBreaker);
 
 builder.Services.AddScoped<ICreateOrderCommandHandler, CreateOrderCommandHandler>();
 builder.Services.AddScoped<IChangeOrderStatusCommandHandler, ChangeOrderStatusCommandHandler>();
 builder.Services.AddScoped<IMarkOrderReadyByKitchenCommandHandler, MarkOrderReadyByKitchenCommandHandler>();
+builder.Services.AddScoped<IAddOrderItemCommandHandler, AddOrderItemCommandHandler>();
 builder.Services.AddScoped<IAddNoteToOrderCommandHandler, AddNoteToOrderCommandHandler>();
 builder.Services.AddScoped<IUpdateItemStatusCommandHandler, UpdateItemStatusCommandHandler>();
 builder.Services.AddScoped<IGetAllOrdersQueryHandler, GetAllOrdersQueryHandler>();
 builder.Services.AddScoped<IGetOrdersByStatusQueryHandler, GetOrdersByStatusQueryHandler>();
 builder.Services.AddScoped<IGetOrdersByTableQueryHandler, GetOrdersByTableQueryHandler>();
 builder.Services.AddScoped<IGetActiveOrdersSummaryByTableQueryHandler, GetActiveOrdersSummaryByTableQueryHandler>();
+builder.Services.AddScoped<IGetReadyDeliveryOrdersQueryHandler, GetReadyDeliveryOrdersQueryHandler>();
 builder.Services.AddScoped<IGetOrderStatusesQueryHandler, GetOrderStatusesQueryHandler>();
 builder.Services.AddScoped<IGetOrderItemStatusesQueryHandler, GetOrderItemStatusesQueryHandler>();
 builder.Services.AddScoped<IGetAllTablesQueryHandler, GetAllTablesQueryHandler>();
@@ -150,6 +155,10 @@ builder.Services.AddControllers()
         };
     });
 
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException("Falta la configuracion Jwt:Key.");
+
 builder.Services
     .AddAuthentication(options =>
     {
@@ -167,7 +176,7 @@ builder.Services
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? string.Empty)),
+                Encoding.UTF8.GetBytes(jwtKey)),
             RoleClaimType = ClaimTypes.Role
         };
 
@@ -190,6 +199,8 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddHealthChecks();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -235,11 +246,13 @@ if (app.Environment.IsDevelopment())
     await AppDbInitializer.InitializeAsync(db);
 }
 
-app.UseHttpsRedirection();
+if (!string.Equals(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"), "true", StringComparison.OrdinalIgnoreCase))
+    app.UseHttpsRedirection();
 app.UseCors(CorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<OrderHub>(OrderHubRoutes.Path);
+app.MapHealthChecks("/health");
 app.Run();

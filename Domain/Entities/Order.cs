@@ -46,16 +46,25 @@ public class Order
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void RefreshTotal()
+    {
+        RecalculateTotal();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public OrderStatusHistory ChangeStatus(int newStatusId, Guid changedByUserId)
     {
         if (OrderStatusIds.IsTerminal(StatusId))
             throw new DomainException(
-                $"La orden ya se encuentra en un estado final ('{StatusId}') y no admite nuevos cambios de estado.");
+                "Este pedido ya fue cerrado y no admite cambios.");
+
+        if ((newStatusId == OrderStatusIds.ReadyToClose || newStatusId == OrderStatusIds.Closed) && !CanBeClosed())
+            throw new DomainException(
+                "Todavía quedan productos pendientes de entrega.");
 
         if (!OrderStatusIds.IsValidTransition(StatusId, newStatusId))
             throw new DomainException(
-                $"No se puede cambiar del estado '{StatusId}' al estado '{newStatusId}'. " +
-                "Revise el flujo permitido: Open -> InProgress -> ReadyToClose -> Closed (o Cancelled en cualquier punto activo).");
+                $"No se puede pasar el pedido de {GetStatusLabel(StatusId)} a {GetStatusLabel(newStatusId)}.");
 
         var history = OrderStatusHistory.Create(Id, StatusId, newStatusId, changedByUserId);
 
@@ -81,13 +90,28 @@ public class Order
 
     private void RecalculateTotal()
     {
-        Total = Items.Sum(i => i.UnitPriceSnapshot * i.Quantity);
+        Total = Items
+            .Where(i => i.StatusId != OrderItemStatusIds.Cancelled)
+            .Sum(i => i.UnitPriceSnapshot * i.Quantity);
     }
 
     private void EnsureOrderIsModifiable()
     {
         if (StatusId == OrderStatusIds.ReadyToClose || StatusId == OrderStatusIds.Closed || StatusId == OrderStatusIds.Cancelled)
             throw new DomainException(
-                $"No se puede modificar una orden en estado '{StatusId}'. Solo se pueden modificar ordenes abiertas.");
+                "No se pueden agregar productos porque la cuenta ya fue solicitada o el pedido está cerrado.");
     }
+
+    private bool CanBeClosed()
+        => Items.Count > 0 && Items.All(item => item.StatusId is OrderItemStatusIds.Delivered or OrderItemStatusIds.Cancelled);
+
+    private static string GetStatusLabel(int statusId) => statusId switch
+    {
+        OrderStatusIds.Open => "abierto",
+        OrderStatusIds.InProgress => "en preparación",
+        OrderStatusIds.ReadyToClose => "cuenta solicitada",
+        OrderStatusIds.Closed => "cerrado",
+        OrderStatusIds.Cancelled => "cancelado",
+        _ => "otro estado"
+    };
 }

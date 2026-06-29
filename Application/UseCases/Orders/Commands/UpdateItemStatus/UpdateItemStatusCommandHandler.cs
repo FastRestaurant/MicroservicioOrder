@@ -13,6 +13,7 @@ public sealed class UpdateItemStatusCommandHandler : IUpdateItemStatusCommandHan
 {
     private readonly IOrderRepository _orderRepository;
     private readonly IStatusRepository _statusRepository;
+    private readonly IStockClient _stockClient;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IOrderNotifier _orderNotifier;
     private readonly ILogger<UpdateItemStatusCommandHandler> _logger;
@@ -20,12 +21,14 @@ public sealed class UpdateItemStatusCommandHandler : IUpdateItemStatusCommandHan
     public UpdateItemStatusCommandHandler(
         IOrderRepository orderRepository,
         IStatusRepository statusRepository,
+        IStockClient stockClient,
         IUnitOfWork unitOfWork,
         IOrderNotifier orderNotifier,
         ILogger<UpdateItemStatusCommandHandler> logger)
     {
         _orderRepository = orderRepository;
         _statusRepository = statusRepository;
+        _stockClient = stockClient;
         _unitOfWork = unitOfWork;
         _orderNotifier = orderNotifier;
         _logger = logger;
@@ -51,10 +54,22 @@ public sealed class UpdateItemStatusCommandHandler : IUpdateItemStatusCommandHan
         var item = order.Items.FirstOrDefault(i => i.Id == command.ItemId)
             ?? throw new NotFoundException(nameof(OrderItem), command.ItemId);
 
+        if (item.StatusId == newStatus.Id)
+            return OrderMapper.ToResponse(order);
+
+        if (newStatus.Id == OrderItemStatusIds.Cancelled && item.StatusId != OrderItemStatusIds.Pending)
+            throw new ConflictException("No se puede cancelar el producto porque cocina ya lo recibió.");
+
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
+            if (item.StatusId == OrderItemStatusIds.Pending && newStatus.Id == OrderItemStatusIds.Ready)
+                item.UpdateStatus(OrderItemStatusIds.SentToKitchen);
+
             item.UpdateStatus(newStatus.Id);
+
+            if (newStatus.Id == OrderItemStatusIds.Cancelled)
+                order.RefreshTotal();
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -70,6 +85,9 @@ public sealed class UpdateItemStatusCommandHandler : IUpdateItemStatusCommandHan
 
         var response = OrderMapper.ToResponse(updatedOrder);
 
+        if (newStatus.Id == OrderItemStatusIds.Cancelled)
+            await ReleaseItemStockAsync(updatedOrder.Id, item.Id, cancellationToken);
+
         await NotifyOrderItemStatusChangedAsync(response, cancellationToken);
 
         return response;
@@ -84,6 +102,25 @@ public sealed class UpdateItemStatusCommandHandler : IUpdateItemStatusCommandHan
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "No se pudo notificar en tiempo real el cambio de estado del item de la orden {OrderId}.", order.Id);
+        }
+    }
+
+    private async Task ReleaseItemStockAsync(Guid orderId, Guid itemId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var releaseResult = await _stockClient.ReleaseForOrderAsync(new StockReleaseRequestDto
+            {
+                OrderId = orderId,
+                OrderItemId = itemId
+            }, cancellationToken);
+
+            if (!releaseResult.Success)
+                _logger.LogWarning("No se pudo liberar el stock al cancelar el item {OrderItemId} de la orden {OrderId}. {Message}", itemId, orderId, releaseResult.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo liberar el stock al cancelar el item {OrderItemId} de la orden {OrderId}.", itemId, orderId);
         }
     }
 }

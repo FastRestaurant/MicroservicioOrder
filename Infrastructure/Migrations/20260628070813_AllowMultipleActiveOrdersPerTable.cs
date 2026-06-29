@@ -10,9 +10,15 @@ namespace Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "UX_Orders_Active_TableId",
-                table: "Orders");
+            migrationBuilder.Sql("""
+                IF EXISTS (
+                    SELECT 1
+                    FROM sys.indexes
+                    WHERE name = N'UX_Orders_Active_TableId'
+                      AND object_id = OBJECT_ID(N'[Orders]')
+                )
+                DROP INDEX [UX_Orders_Active_TableId] ON [Orders];
+                """);
         }
 
         /// <inheritdoc />

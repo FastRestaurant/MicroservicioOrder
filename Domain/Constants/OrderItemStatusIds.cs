@@ -19,7 +19,7 @@ public static class OrderItemStatusIds
 
     private static readonly Dictionary<int, int[]> ValidTransitions = new()
     {
-        [Pending] = [SentToKitchen, Cancelled],
+        [Pending] = [SentToKitchen, Delivered, Cancelled],
         [SentToKitchen] = [Ready, Cancelled],
         [Ready] = [Delivered, Cancelled],
         [Delivered] = [],

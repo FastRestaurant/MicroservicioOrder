@@ -115,6 +115,24 @@ public class OrderRepository : IOrderRepository
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyCollection<Order>> GetActiveWithReadyItemsAsync(CancellationToken ct = default)
+    {
+        var activeStatuses = new[]
+        {
+            OrderStatusIds.Open,
+            OrderStatusIds.InProgress,
+            OrderStatusIds.ReadyToClose
+        };
+
+        return await WithDetails(_context.Orders)
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Where(o => activeStatuses.Contains(o.StatusId) &&
+                        o.Items.Any(i => i.StatusId == OrderItemStatusIds.Ready))
+            .OrderBy(o => o.CreatedAt)
+            .ToListAsync(ct);
+    }
+
     public async Task AddAsync(Order order, CancellationToken ct = default)
         => await _context.Orders.AddAsync(order, ct);
 

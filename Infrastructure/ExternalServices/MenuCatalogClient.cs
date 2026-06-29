@@ -25,7 +25,7 @@ public sealed class MenuCatalogClient : IMenuCatalogClient
 
         try
         {
-            var response = await _httpClient.GetAsync($"api/menu-integration/{resource}/{productId}/for-order", cancellationToken);
+            var response = await _httpClient.GetAsync($"api/v1/menu-integration/{resource}/{productId}/for-order", cancellationToken);
 
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return null;
