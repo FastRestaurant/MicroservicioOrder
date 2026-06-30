@@ -58,15 +58,11 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         if (!waiterExists)
             throw new NotFoundException("User", command.WaiterId);
 
-        var table = await _tableRepository.GetByIdAsync(command.TableId, cancellationToken)
+        var table = await _tableRepository.GetByIdForReadAsync(command.TableId, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.TableId);
 
         if (!table.IsEnabled)
             throw new DomainException($"La mesa '{table.Number}' está deshabilitada.");
-
-        var tableOccupied = await _orderRepository.HasActiveOrderForTableAsync(command.TableId, cancellationToken);
-        if (tableOccupied)
-            throw new ConflictException($"La mesa '{table.Number}' ya tiene una orden activa. Ciérrela antes de abrir una nueva.");
 
         var order = Order.Create(command.TableId, command.WaiterId);
         var orderItems = new List<OrderItem>();
@@ -74,7 +70,11 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         foreach (var requestedItem in command.Items)
         {
             OrderItem.ValidateRequest(requestedItem.ProductId, requestedItem.ProductType, requestedItem.Quantity, requestedItem.Notes);
-            orderItems.Add(await CreateOrderItemAsync(order.Id, requestedItem, cancellationToken));
+            var item = await CreateOrderItemAsync(order.Id, requestedItem, cancellationToken);
+            if (!RequiresKitchen(item))
+                item.UpdateStatus(OrderItemStatusIds.Delivered);
+
+            orderItems.Add(item);
         }
 
         var consumedItems = new List<OrderItem>();
@@ -108,12 +108,20 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
             throw;
         }
 
-        var kitchenResult = await SendToKitchenAsync(order, command.WaiterId, table.Number, orderItems, cancellationToken);
+        var kitchenItems = orderItems.Where(RequiresKitchen).ToArray();
+        var kitchenResult = kitchenItems.Length == 0
+            ? new KitchenEnqueueResultDto { Success = true }
+            : await SendToKitchenAsync(order, command.WaiterId, table.Number, kitchenItems, cancellationToken);
 
-        if (kitchenResult.Success)
+        if (kitchenResult.Success && kitchenItems.Length > 0)
             await MarkAsInProgressAsync(order, command.WaiterId, cancellationToken);
-        else
-            _logger.LogWarning("La orden {OrderId} quedo en Open porque no se pudo enviar a la cocina. {Message}", order.Id, kitchenResult.Message);
+        else if (!kitchenResult.Success)
+        {
+            await CancelCreatedOrderAsync(order, command.WaiterId, cancellationToken);
+            await TryReleaseConsumedStockAsync(order.Id, orderItems, cancellationToken);
+            _logger.LogWarning("La orden {OrderId} fue cancelada porque no se pudo enviar a la cocina. {Message}", order.Id, kitchenResult.Message);
+            throw new DomainException(kitchenResult.Message ?? "No se pudo enviar el pedido a cocina. Intentá nuevamente.");
+        }
 
         var createdOrder = await _orderRepository.GetByIdForReadAsync(order.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Order), order.Id);
@@ -129,7 +137,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
     {
         try
         {
-            await _orderNotifier.NotifyOrderCreatedAsync(order, cancellationToken);
+            await _orderNotifier.NotifyOrderCreatedAsync(order, CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -168,10 +176,24 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         }, cancellationToken);
 
         if (!stockResult.Success)
-            throw new DomainException(string.IsNullOrWhiteSpace(stockResult.Message)
-                ? "No hay stock suficiente para el producto solicitado."
-                : stockResult.Message);
+            throw new DomainException(BuildStockErrorMessage(item, stockResult));
     }
+
+    private static string BuildStockErrorMessage(OrderItem item, StockOperationResultDto stockResult)
+    {
+        if (IsProductStockIssue(stockResult))
+            return $"No hay stock suficiente para \"{item.ProductNameSnapshot}\".";
+
+        return string.IsNullOrWhiteSpace(stockResult.Message)
+            ? $"No hay stock suficiente para \"{item.ProductNameSnapshot}\"."
+            : stockResult.Message;
+    }
+
+    private static bool IsProductStockIssue(StockOperationResultDto stockResult)
+        => stockResult.MissingItems.Count > 0 ||
+           stockResult.Message.Contains("stock suficiente", StringComparison.OrdinalIgnoreCase) ||
+           stockResult.Message.Contains("Stock insuficiente", StringComparison.OrdinalIgnoreCase) ||
+           stockResult.Message.Contains("stock configurado", StringComparison.OrdinalIgnoreCase);
 
     private async Task TryRollbackAsync(CancellationToken cancellationToken)
     {
@@ -243,6 +265,9 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
+            foreach (var item in order.Items.Where(item => item.StatusId == OrderItemStatusIds.Pending))
+                item.UpdateStatus(OrderItemStatusIds.SentToKitchen);
+
             order.ChangeStatus(OrderStatusIds.InProgress, waiterId);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -253,4 +278,23 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
             throw;
         }
     }
+
+    private async Task CancelCreatedOrderAsync(Order order, Guid waiterId, CancellationToken cancellationToken)
+    {
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            order.ChangeStatus(OrderStatusIds.Cancelled, waiterId);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    private static bool RequiresKitchen(OrderItem item)
+        => item.ProductType == ProductTypes.Dish && item.DurationMinutesSnapshot > 0;
 }

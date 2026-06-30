@@ -13,7 +13,12 @@ public sealed class TableRepository : ITableRepository
         _context = context;
     }
 
-    public Task<Table?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<Table?> GetByIdForReadAsync(Guid id, CancellationToken cancellationToken = default)
+        => _context.Tables
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+
+    public Task<Table?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
         => _context.Tables
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 

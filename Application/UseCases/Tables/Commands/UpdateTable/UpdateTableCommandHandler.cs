@@ -8,11 +8,16 @@ namespace OrderService.Application.UseCases.Tables.Commands.UpdateTable;
 public sealed class UpdateTableCommandHandler : IUpdateTableCommandHandler
 {
     private readonly ITableRepository _tableRepository;
+    private readonly IOrderRepository _orderRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public UpdateTableCommandHandler(ITableRepository tableRepository, IUnitOfWork unitOfWork)
+    public UpdateTableCommandHandler(
+        ITableRepository tableRepository,
+        IOrderRepository orderRepository,
+        IUnitOfWork unitOfWork)
     {
         _tableRepository = tableRepository;
+        _orderRepository = orderRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -21,7 +26,7 @@ public sealed class UpdateTableCommandHandler : IUpdateTableCommandHandler
         if (command.Id == Guid.Empty)
             throw new ValidationException("El id de la mesa es obligatorio.");
 
-        var table = await _tableRepository.GetByIdAsync(command.Id, cancellationToken)
+        var table = await _tableRepository.GetByIdForUpdateAsync(command.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.Id);
 
         var number = command.Number?.Trim() ?? string.Empty;
@@ -30,6 +35,13 @@ public sealed class UpdateTableCommandHandler : IUpdateTableCommandHandler
         var existing = await _tableRepository.GetByNumberAsync(number, cancellationToken);
         if (existing is not null && existing.Id != command.Id)
             throw new DomainException($"Ya existe una mesa con el número '{number}'.");
+
+        if (table.IsEnabled && !command.IsEnabled)
+        {
+            var hasActiveOrders = await _orderRepository.HasActiveOrdersForTableAsync(command.Id, cancellationToken);
+            if (hasActiveOrders)
+                throw new DomainException("No se puede deshabilitar una mesa con pedidos activos.");
+        }
 
         table.Update(number, command.SeatCount, location, command.IsEnabled);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -10,6 +10,7 @@ public sealed class SignalROrderNotifier : IOrderNotifier
     private const string OrderCreatedMethod = "OrderCreated";
     private const string OrderStatusChangedMethod = "OrderStatusChanged";
     private const string OrderReadyToCloseMethod = "OrderReadyToClose";
+    private const string OrderDelayedMethod = "OrderDelayed";
     private const string OrderItemAddedMethod = "OrderItemAdded";
     private const string OrderItemRemovedMethod = "OrderItemRemoved";
     private const string OrderItemStatusChangedMethod = "OrderItemStatusChanged";
@@ -30,6 +31,9 @@ public sealed class SignalROrderNotifier : IOrderNotifier
 
     public Task NotifyOrderReadyToCloseAsync(OrderResponseDto order, CancellationToken cancellationToken = default) =>
         SendToGroupsAsync(OrderReadyToCloseMethod, order, cancellationToken, OrderHubGroups.Waitress, OrderHubGroups.Admin);
+
+    public Task NotifyOrderDelayedAsync(OrderResponseDto order, CancellationToken cancellationToken = default) =>
+        SendToGroupsAsync(OrderDelayedMethod, order, cancellationToken, OrderHubGroups.Waitress, OrderHubGroups.Admin);
 
     public Task NotifyOrderItemAddedAsync(OrderResponseDto order, CancellationToken cancellationToken = default) =>
         SendToGroupsAsync(OrderItemAddedMethod, order, cancellationToken, OrderHubGroups.Kitchen, OrderHubGroups.Admin);

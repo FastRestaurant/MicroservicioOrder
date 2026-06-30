@@ -25,7 +25,7 @@ public sealed class DeleteTableCommandHandler : IDeleteTableCommandHandler
         if (command.Id == Guid.Empty)
             throw new ValidationException("El id de la mesa es obligatorio.");
 
-        var table = await _tableRepository.GetByIdAsync(command.Id, cancellationToken)
+        var table = await _tableRepository.GetByIdForUpdateAsync(command.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.Id);
 
         var hasOrders = await _orderRepository.HasAnyOrderForTableAsync(command.Id, cancellationToken);

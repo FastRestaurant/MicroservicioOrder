@@ -19,7 +19,7 @@ public sealed class GetTableByIdQueryHandler : IGetTableByIdQueryHandler
     public async Task<TableResponseDto> Handle(
         GetTableByIdQuery query, CancellationToken cancellationToken = default)
     {
-        var table = await _tableRepository.GetByIdAsync(query.Id, cancellationToken)
+        var table = await _tableRepository.GetByIdForReadAsync(query.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), query.Id);
 
         return new TableResponseDto

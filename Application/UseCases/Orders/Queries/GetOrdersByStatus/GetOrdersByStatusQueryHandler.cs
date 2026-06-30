@@ -1,8 +1,6 @@
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
-using OrderService.Application.Mappings;
 using OrderService.Domain.Constants;
-using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
 namespace OrderService.Application.UseCases.Orders.Queries.GetOrdersByStatus;
@@ -32,13 +30,13 @@ public sealed class GetOrdersByStatusQueryHandler : IGetOrdersByStatusQueryHandl
         var status = await _statusRepository.GetByNameAsync(query.Status, StatusTypes.Order, cancellationToken)
             ?? throw new DomainException($"'{query.Status}' no es un estado valido para una orden.");
 
-        var (orders, totalCount) = await _orderRepository.GetPagedByStatusAsync(
+        var (orders, totalCount) = await _orderRepository.GetPagedSummariesByStatusAsync(
             status.Id, query.Page, query.PageSize, cancellationToken);
         var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)query.PageSize);
 
         return new PagedResponseDto<OrderSummaryDto>
         {
-            Items = orders.Select(OrderMapper.ToSummary).ToArray(),
+            Items = orders,
             Page = query.Page,
             PageSize = query.PageSize,
             TotalItems = totalCount,

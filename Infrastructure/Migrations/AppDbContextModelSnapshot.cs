@@ -58,10 +58,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("StatusId");
 
-                    b.HasIndex("TableId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Orders_Active_TableId")
-                        .HasFilter("[StatusId] IN (1, 2, 3)");
+                    b.HasIndex("TableId");
 
                     b.ToTable("Orders", (string)null);
                 });

@@ -4,7 +4,8 @@ namespace OrderService.Application.Interfaces;
 
 public interface ITableRepository
 {
-    Task<Table?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Table?> GetByIdForReadAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Table?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Table?> GetByNumberAsync(string number, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<Table>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<(IReadOnlyCollection<Table> Tables, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);

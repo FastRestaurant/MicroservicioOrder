@@ -75,7 +75,7 @@ public sealed class AddNoteToOrderCommandHandler : IAddNoteToOrderCommandHandler
     {
         try
         {
-            await _orderNotifier.NotifyOrderNoteAddedAsync(order, cancellationToken);
+            await _orderNotifier.NotifyOrderNoteAddedAsync(order, CancellationToken.None);
         }
         catch (Exception ex)
         {

@@ -36,7 +36,7 @@ public class OrderItem
             throw new ValidationException("El tipo de producto es obligatorio.");
 
         if (!ProductTypes.IsValid(productType))
-            throw new DomainException($"'{productType}' no es un tipo de producto valido.");
+            throw new DomainException("El producto seleccionado no es válido.");
 
         if (quantity <= 0)
             throw new ValidationException("La cantidad debe ser mayor a cero.");
@@ -54,10 +54,10 @@ public class OrderItem
         ValidateRequest(productId, productType, quantity, notes);
 
         if (unitPrice < 0)
-            throw new DomainException("El precio unitario del producto no es valido.");
+            throw new DomainException("El precio del producto no es válido.");
 
         if (durationMinutes < 0)
-            throw new DomainException("La duracion de preparacion del producto no es valida.");
+            throw new DomainException("El tiempo de preparación del producto no es válido.");
 
         return new OrderItem
         {
@@ -80,16 +80,15 @@ public class OrderItem
     {
         if (!OrderItemStatusIds.IsValid(newStatusId))
             throw new DomainException(
-                $"'{newStatusId}' no es un estado valido para un item.");
+                "El estado solicitado no es válido para este producto.");
 
         if (OrderItemStatusIds.IsTerminal(StatusId))
             throw new DomainException(
-                $"El item ya se encuentra en un estado final ('{StatusId}') y no admite nuevos cambios de estado.");
+                "Este producto ya está cerrado y no admite cambios.");
 
         if (!OrderItemStatusIds.IsValidTransition(StatusId, newStatusId))
             throw new DomainException(
-                $"No se puede cambiar el item del estado '{StatusId}' al estado '{newStatusId}'. " +
-                "Revise el flujo permitido: Pending -> SentToKitchen -> Ready -> Delivered (o Cancelled en cualquier punto activo).");
+                "No se pudo actualizar el estado del producto. Actualizá la pantalla e intentá nuevamente.");
 
         StatusId = newStatusId;
         UpdatedAt = DateTime.UtcNow;

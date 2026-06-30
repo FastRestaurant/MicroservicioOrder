@@ -7,4 +7,5 @@ public sealed class PagedResponseDto<T>
     public int PageSize { get; init; }
     public int TotalItems { get; init; }
     public int TotalPages { get; init; }
+    public IReadOnlyDictionary<string, int> StatusCounts { get; init; } = new Dictionary<string, int>();
 }

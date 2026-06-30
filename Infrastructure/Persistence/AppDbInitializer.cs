@@ -19,10 +19,7 @@ public static class AppDbInitializer
         foreach (var seed in BuildTables())
         {
             if (existingTables.TryGetValue(seed.Number, out var existing))
-            {
-                existing.Update(seed.Number, seed.SeatCount, seed.Location, seed.IsEnabled);
                 continue;
-            }
 
             await context.Tables.AddAsync(
                 Table.Create(seed.Number, seed.SeatCount, seed.Location, seed.IsEnabled),

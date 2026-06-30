@@ -10,6 +10,8 @@ public interface IOrderNotifier
 
     Task NotifyOrderReadyToCloseAsync(OrderResponseDto order, CancellationToken cancellationToken = default);
 
+    Task NotifyOrderDelayedAsync(OrderResponseDto order, CancellationToken cancellationToken = default);
+
     Task NotifyOrderItemAddedAsync(OrderResponseDto order, CancellationToken cancellationToken = default);
 
     Task NotifyOrderItemRemovedAsync(OrderResponseDto order, CancellationToken cancellationToken = default);

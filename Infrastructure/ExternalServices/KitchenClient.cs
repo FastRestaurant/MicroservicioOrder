@@ -1,5 +1,5 @@
+using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 
@@ -22,7 +22,7 @@ public sealed class KitchenClient : IKitchenClient
         HttpResponseMessage response;
         try
         {
-            response = await _httpClient.PostAsJsonAsync("api/KitchenOrders", request, cancellationToken);
+            response = await _httpClient.PostAsJsonAsync("api/v1/kitchenOrders", request, cancellationToken);
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -35,7 +35,7 @@ public sealed class KitchenClient : IKitchenClient
 
         using var _ = response;
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        var result = Deserialize<KitchenEnqueueResultDto>(content);
+        var result = HttpResultReader.Deserialize<KitchenEnqueueResultDto>(content);
 
         if (result is not null)
         {
@@ -54,34 +54,61 @@ public sealed class KitchenClient : IKitchenClient
 
         if (!response.IsSuccessStatusCode)
         {
-            var error = Deserialize<ErrorResponseDto>(content);
+            var error = HttpResultReader.ReadErrorMessage(content);
             return new KitchenEnqueueResultDto
             {
                 Success = false,
-                Message = string.IsNullOrWhiteSpace(error?.Message)
+                Message = string.IsNullOrWhiteSpace(error)
                     ? "No se pudo enviar el pedido a la cocina."
-                    : error.Message
+                    : error
             };
         }
 
         return new KitchenEnqueueResultDto { Success = false, Message = "No se pudo confirmar el envio a la cocina." };
     }
 
-    private static T? Deserialize<T>(string content)
+    public async Task<KitchenCancelResultDto> CancelByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(content))
-            return default;
+        if (_httpClient.BaseAddress is null)
+            return new KitchenCancelResultDto { Success = false, Message = "El servicio de cocina no esta configurado." };
 
+        HttpResponseMessage response;
         try
         {
-            return JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            response = await _httpClient.PatchAsync($"api/v1/kitchenOrders/by-order/{orderId}/cancel", null, cancellationToken);
         }
-        catch (JsonException)
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return default;
+            return new KitchenCancelResultDto { Success = false, Message = "No se pudo conectar con la cocina en este momento." };
         }
+        catch (HttpRequestException)
+        {
+            return new KitchenCancelResultDto { Success = false, Message = "No se pudo conectar con la cocina en este momento." };
+        }
+
+        using var _ = response;
+
+        if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
+            return new KitchenCancelResultDto { Success = true };
+
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            var message = HttpResultReader.ReadErrorMessage(content);
+            return new KitchenCancelResultDto
+            {
+                Success = false,
+                Blocked = true,
+                Message = string.IsNullOrWhiteSpace(message) ? "La cocina ya comenzo a preparar la orden." : message
+            };
+        }
+
+        var error = HttpResultReader.ReadErrorMessage(content);
+        return new KitchenCancelResultDto
+        {
+            Success = false,
+            Message = string.IsNullOrWhiteSpace(error) ? "No se pudo cancelar en la cocina." : error
+        };
     }
 }
