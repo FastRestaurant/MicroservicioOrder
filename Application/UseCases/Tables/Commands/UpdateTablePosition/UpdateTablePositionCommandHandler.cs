@@ -1,45 +1,32 @@
-﻿using OrderService.Application.DTOs;
+using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
-namespace OrderService.Application.UseCases.Tables.Commands.ToggleTableStatus;
+namespace OrderService.Application.UseCases.Tables.Commands.UpdateTablePosition;
 
-public sealed class ToggleTableStatusCommandHandler : IToggleTableStatusCommandHandler
+public sealed class UpdateTablePositionCommandHandler : IUpdateTablePositionCommandHandler
 {
     private readonly ITableRepository _tableRepository;
-    private readonly IOrderRepository _orderRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public ToggleTableStatusCommandHandler(
-        ITableRepository tableRepository,
-        IOrderRepository orderRepository,
-        IUnitOfWork unitOfWork)
+    public UpdateTablePositionCommandHandler(ITableRepository tableRepository, IUnitOfWork unitOfWork)
     {
         _tableRepository = tableRepository;
-        _orderRepository = orderRepository;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<TableResponseDto> Handle(
-        ToggleTableStatusCommand command, CancellationToken cancellationToken = default)
+        UpdateTablePositionCommand command,
+        CancellationToken cancellationToken = default)
     {
         if (command.TableId == Guid.Empty)
             throw new ValidationException("El id de la mesa es obligatorio.");
 
-        var table = await _tableRepository.GetByIdForUpdateAsync(command.TableId, cancellationToken)
+        var table = await _tableRepository.GetByIdAsync(command.TableId, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.TableId);
 
-        if (!command.Enable)
-        {
-            var hasActiveOrders = await _orderRepository.HasActiveOrdersForTableAsync(command.TableId, cancellationToken);
-            if (hasActiveOrders)
-                throw new DomainException("No se puede deshabilitar una mesa con pedidos activos.");
-        }
-
-        if (command.Enable) table.Enable();
-        else table.Disable();
-
+        table.UpdatePosition(command.PositionX, command.PositionY);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new TableResponseDto

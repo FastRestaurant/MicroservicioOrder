@@ -30,6 +30,8 @@ public sealed class GetTableByIdQueryHandler : IGetTableByIdQueryHandler
             Location = table.Location,
             IsEnabled = table.IsEnabled,
             OperationalStatus = await GetOperationalStatus(table, cancellationToken),
+            PositionX = table.PositionX,
+            PositionY = table.PositionY,
             Version = table.Version
         };
     }
