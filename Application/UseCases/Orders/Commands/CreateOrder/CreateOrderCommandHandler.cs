@@ -58,7 +58,7 @@ public sealed class CreateOrderCommandHandler : ICreateOrderCommandHandler
         if (!waiterExists)
             throw new NotFoundException("User", command.WaiterId);
 
-        var table = await _tableRepository.GetByIdAsync(command.TableId, cancellationToken)
+        var table = await _tableRepository.GetByIdForReadAsync(command.TableId, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.TableId);
 
         if (!table.IsEnabled)

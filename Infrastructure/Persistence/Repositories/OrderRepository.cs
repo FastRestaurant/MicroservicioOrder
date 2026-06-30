@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Domain.Constants;
 using OrderService.Domain.Entities;
@@ -37,33 +38,38 @@ public class OrderRepository : IOrderRepository
             .Include(o => o.StatusHistory)
                 .ThenInclude(h => h.NewStatus);
 
-    public async Task<(IReadOnlyCollection<Order> Orders, int TotalCount)> GetPagedAsync(
+    public async Task<(IReadOnlyCollection<OrderSummaryDto> Orders, int TotalCount)> GetPagedSummariesAsync(
         int page, int pageSize, CancellationToken ct = default)
     {
         var query = _context.Orders
             .AsNoTracking()
-            .Include(o => o.Table)
-            .Include(o => o.Status)
-            .Include(o => o.Items)
             .OrderByDescending(o => o.CreatedAt);
 
         var totalCount = await query.CountAsync(ct);
         var orders = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(o => new OrderSummaryDto
+            {
+                Id = o.Id,
+                TableId = o.TableId,
+                TableNumber = o.Table.Number,
+                WaiterId = o.WaiterId,
+                Status = o.Status.Name,
+                Total = o.Total,
+                CreatedAt = o.CreatedAt,
+                ItemCount = o.Items.Count
+            })
             .ToListAsync(ct);
 
         return (orders, totalCount);
     }
 
-    public async Task<(IReadOnlyCollection<Order> Orders, int TotalCount)> GetPagedByStatusAsync(
+    public async Task<(IReadOnlyCollection<OrderSummaryDto> Orders, int TotalCount)> GetPagedSummariesByStatusAsync(
         int statusId, int page, int pageSize, CancellationToken ct = default)
     {
         var query = _context.Orders
             .AsNoTracking()
-            .Include(o => o.Table)
-            .Include(o => o.Status)
-            .Include(o => o.Items)
             .Where(o => o.StatusId == statusId)
             .OrderByDescending(o => o.CreatedAt);
 
@@ -71,19 +77,27 @@ public class OrderRepository : IOrderRepository
         var orders = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(o => new OrderSummaryDto
+            {
+                Id = o.Id,
+                TableId = o.TableId,
+                TableNumber = o.Table.Number,
+                WaiterId = o.WaiterId,
+                Status = o.Status.Name,
+                Total = o.Total,
+                CreatedAt = o.CreatedAt,
+                ItemCount = o.Items.Count
+            })
             .ToListAsync(ct);
 
         return (orders, totalCount);
     }
 
-    public async Task<(IReadOnlyCollection<Order> Orders, int TotalCount)> GetPagedByTableAsync(
+    public async Task<(IReadOnlyCollection<OrderSummaryDto> Orders, int TotalCount)> GetPagedSummariesByTableAsync(
         Guid tableId, int page, int pageSize, CancellationToken ct = default)
     {
         var query = _context.Orders
             .AsNoTracking()
-            .Include(o => o.Table)
-            .Include(o => o.Status)
-            .Include(o => o.Items)
             .Where(o => o.TableId == tableId)
             .OrderByDescending(o => o.CreatedAt);
 
@@ -91,12 +105,60 @@ public class OrderRepository : IOrderRepository
         var orders = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(o => new OrderSummaryDto
+            {
+                Id = o.Id,
+                TableId = o.TableId,
+                TableNumber = o.Table.Number,
+                WaiterId = o.WaiterId,
+                Status = o.Status.Name,
+                Total = o.Total,
+                CreatedAt = o.CreatedAt,
+                ItemCount = o.Items.Count
+            })
             .ToListAsync(ct);
 
         return (orders, totalCount);
     }
 
-    public async Task<IReadOnlyCollection<Order>> GetActiveByTableAsync(Guid tableId, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<OrderSummaryDto> Orders, decimal Total, bool CanClose)> GetActiveSummaryByTableAsync(Guid tableId, CancellationToken ct = default)
+    {
+        var activeStatuses = new[]
+        {
+            OrderStatusIds.Open,
+            OrderStatusIds.InProgress,
+            OrderStatusIds.ReadyToClose
+        };
+
+        var orders = await _context.Orders
+            .AsNoTracking()
+            .Where(o => o.TableId == tableId && activeStatuses.Contains(o.StatusId))
+            .OrderBy(o => o.CreatedAt)
+            .Select(o => new
+            {
+                o.StatusId,
+                Summary = new OrderSummaryDto
+                {
+                    Id = o.Id,
+                    TableId = o.TableId,
+                    TableNumber = o.Table.Number,
+                    WaiterId = o.WaiterId,
+                    Status = o.Status.Name,
+                    Total = o.Total,
+                    CreatedAt = o.CreatedAt,
+                    ItemCount = o.Items.Count
+                }
+            })
+            .ToListAsync(ct);
+
+        var summaries = orders.Select(order => order.Summary).ToArray();
+        var total = summaries.Sum(order => order.Total);
+        var canClose = orders.Count > 0 && orders.All(order => order.StatusId == OrderStatusIds.ReadyToClose);
+
+        return (summaries, total, canClose);
+    }
+
+    public async Task<bool> HasActiveOrdersForTableAsync(Guid tableId, CancellationToken ct = default)
     {
         var activeStatuses = new[]
         {
@@ -107,12 +169,7 @@ public class OrderRepository : IOrderRepository
 
         return await _context.Orders
             .AsNoTracking()
-            .Include(o => o.Table)
-            .Include(o => o.Status)
-            .Include(o => o.Items)
-            .Where(o => o.TableId == tableId && activeStatuses.Contains(o.StatusId))
-            .OrderBy(o => o.CreatedAt)
-            .ToListAsync(ct);
+            .AnyAsync(o => o.TableId == tableId && activeStatuses.Contains(o.StatusId), ct);
     }
 
     public async Task<IReadOnlyCollection<Order>> GetActiveWithReadyItemsAsync(CancellationToken ct = default)

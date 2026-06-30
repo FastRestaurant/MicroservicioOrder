@@ -7,25 +7,25 @@ using OrderService.Domain.Constants;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
-namespace OrderService.Application.UseCases.Orders.Commands.MarkOrderReadyByKitchen;
+namespace OrderService.Application.UseCases.Orders.Commands.NotifyOrderReadyByKitchen;
 
-public sealed class MarkOrderReadyByKitchenCommandHandler : IMarkOrderReadyByKitchenCommandHandler
+public sealed class NotifyOrderReadyByKitchenCommandHandler : INotifyOrderReadyByKitchenCommandHandler
 {
     private readonly IOrderRepository _orderRepository;
     private readonly IOrderNotifier _orderNotifier;
-    private readonly ILogger<MarkOrderReadyByKitchenCommandHandler> _logger;
+    private readonly ILogger<NotifyOrderReadyByKitchenCommandHandler> _logger;
 
-    public MarkOrderReadyByKitchenCommandHandler(
+    public NotifyOrderReadyByKitchenCommandHandler(
         IOrderRepository orderRepository,
         IOrderNotifier orderNotifier,
-        ILogger<MarkOrderReadyByKitchenCommandHandler> logger)
+        ILogger<NotifyOrderReadyByKitchenCommandHandler> logger)
     {
         _orderRepository = orderRepository;
         _orderNotifier = orderNotifier;
         _logger = logger;
     }
 
-    public async Task<OrderResponseDto> Handle(MarkOrderReadyByKitchenCommand command, CancellationToken cancellationToken = default)
+    public async Task<OrderResponseDto> Handle(NotifyOrderReadyByKitchenCommand command, CancellationToken cancellationToken = default)
     {
         if (command.OrderId == Guid.Empty)
             throw new ValidationException("El id de la orden es obligatorio.");

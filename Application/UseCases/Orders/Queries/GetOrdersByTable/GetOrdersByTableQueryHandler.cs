@@ -1,7 +1,5 @@
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
-using OrderService.Application.Mappings;
-using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
 namespace OrderService.Application.UseCases.Orders.Queries.GetOrdersByTable;
@@ -28,13 +26,13 @@ public sealed class GetOrdersByTableQueryHandler : IGetOrdersByTableQueryHandler
         if (query.PageSize < 1 || query.PageSize > MaxPageSize)
             throw new ValidationException($"El tamaño de página debe estar entre 1 y {MaxPageSize}.");
 
-        var (orders, totalCount) = await _orderRepository.GetPagedByTableAsync(
+        var (orders, totalCount) = await _orderRepository.GetPagedSummariesByTableAsync(
             query.TableId, query.Page, query.PageSize, cancellationToken);
         var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)query.PageSize);
 
         return new PagedResponseDto<OrderSummaryDto>
         {
-            Items = orders.Select(OrderMapper.ToSummary).ToArray(),
+            Items = orders,
             Page = query.Page,
             PageSize = query.PageSize,
             TotalItems = totalCount,

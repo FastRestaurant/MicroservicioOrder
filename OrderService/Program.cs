@@ -9,7 +9,7 @@ using OrderService.Application.UseCases.Orders.Commands.AddOrderItem;
 using OrderService.Application.UseCases.Orders.Commands.AddNoteToOrder;
 using OrderService.Application.UseCases.Orders.Commands.ChangeOrderStatus;
 using OrderService.Application.UseCases.Orders.Commands.CreateOrder;
-using OrderService.Application.UseCases.Orders.Commands.MarkOrderReadyByKitchen;
+using OrderService.Application.UseCases.Orders.Commands.NotifyOrderReadyByKitchen;
 using OrderService.Application.UseCases.Orders.Commands.UpdateItemStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetAllOrders;
 using OrderService.Application.UseCases.Orders.Queries.GetActiveOrdersSummaryByTable;
@@ -114,7 +114,7 @@ builder.Services.AddHttpClient<IKitchenClient, KitchenClient>((sp, client) =>
 
 builder.Services.AddScoped<ICreateOrderCommandHandler, CreateOrderCommandHandler>();
 builder.Services.AddScoped<IChangeOrderStatusCommandHandler, ChangeOrderStatusCommandHandler>();
-builder.Services.AddScoped<IMarkOrderReadyByKitchenCommandHandler, MarkOrderReadyByKitchenCommandHandler>();
+builder.Services.AddScoped<INotifyOrderReadyByKitchenCommandHandler, NotifyOrderReadyByKitchenCommandHandler>();
 builder.Services.AddScoped<IAddOrderItemCommandHandler, AddOrderItemCommandHandler>();
 builder.Services.AddScoped<IAddNoteToOrderCommandHandler, AddNoteToOrderCommandHandler>();
 builder.Services.AddScoped<IUpdateItemStatusCommandHandler, UpdateItemStatusCommandHandler>();

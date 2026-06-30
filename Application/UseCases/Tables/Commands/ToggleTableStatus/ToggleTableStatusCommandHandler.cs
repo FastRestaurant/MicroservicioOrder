@@ -27,13 +27,13 @@ public sealed class ToggleTableStatusCommandHandler : IToggleTableStatusCommandH
         if (command.TableId == Guid.Empty)
             throw new ValidationException("El id de la mesa es obligatorio.");
 
-        var table = await _tableRepository.GetByIdAsync(command.TableId, cancellationToken)
+        var table = await _tableRepository.GetByIdForUpdateAsync(command.TableId, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.TableId);
 
         if (!command.Enable)
         {
-            var activeOrders = await _orderRepository.GetActiveByTableAsync(command.TableId, cancellationToken);
-            if (activeOrders.Count > 0)
+            var hasActiveOrders = await _orderRepository.HasActiveOrdersForTableAsync(command.TableId, cancellationToken);
+            if (hasActiveOrders)
                 throw new DomainException("No se puede deshabilitar una mesa con pedidos activos.");
         }
 

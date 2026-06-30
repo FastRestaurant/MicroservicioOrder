@@ -26,7 +26,7 @@ public sealed class UpdateTableCommandHandler : IUpdateTableCommandHandler
         if (command.Id == Guid.Empty)
             throw new ValidationException("El id de la mesa es obligatorio.");
 
-        var table = await _tableRepository.GetByIdAsync(command.Id, cancellationToken)
+        var table = await _tableRepository.GetByIdForUpdateAsync(command.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.Id);
 
         var number = command.Number?.Trim() ?? string.Empty;
@@ -38,8 +38,8 @@ public sealed class UpdateTableCommandHandler : IUpdateTableCommandHandler
 
         if (table.IsEnabled && !command.IsEnabled)
         {
-            var activeOrders = await _orderRepository.GetActiveByTableAsync(command.Id, cancellationToken);
-            if (activeOrders.Count > 0)
+            var hasActiveOrders = await _orderRepository.HasActiveOrdersForTableAsync(command.Id, cancellationToken);
+            if (hasActiveOrders)
                 throw new DomainException("No se puede deshabilitar una mesa con pedidos activos.");
         }
 

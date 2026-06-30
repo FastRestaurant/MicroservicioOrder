@@ -6,7 +6,7 @@ using OrderService.Application.UseCases.Orders.Commands.AddOrderItem;
 using OrderService.Application.UseCases.Orders.Commands.AddNoteToOrder;
 using OrderService.Application.UseCases.Orders.Commands.ChangeOrderStatus;
 using OrderService.Application.UseCases.Orders.Commands.CreateOrder;
-using OrderService.Application.UseCases.Orders.Commands.MarkOrderReadyByKitchen;
+using OrderService.Application.UseCases.Orders.Commands.NotifyOrderReadyByKitchen;
 using OrderService.Application.UseCases.Orders.Commands.UpdateItemStatus;
 using OrderService.Application.UseCases.Orders.Queries.GetActiveOrdersSummaryByTable;
 using OrderService.Application.UseCases.Orders.Queries.GetAllOrders;
@@ -29,7 +29,7 @@ public sealed class OrdersController : ControllerBase
 {
     private readonly ICreateOrderCommandHandler _createOrderHandler;
     private readonly IChangeOrderStatusCommandHandler _changeStatusHandler;
-    private readonly IMarkOrderReadyByKitchenCommandHandler _markReadyByKitchenHandler;
+    private readonly INotifyOrderReadyByKitchenCommandHandler _notifyReadyByKitchenHandler;
     private readonly IAddOrderItemCommandHandler _addOrderItemHandler;
     private readonly IAddNoteToOrderCommandHandler _addNoteHandler;
     private readonly IUpdateItemStatusCommandHandler _updateItemStatusHandler;
@@ -45,7 +45,7 @@ public sealed class OrdersController : ControllerBase
     public OrdersController(
         ICreateOrderCommandHandler createOrderHandler,
         IChangeOrderStatusCommandHandler changeStatusHandler,
-        IMarkOrderReadyByKitchenCommandHandler markReadyByKitchenHandler,
+        INotifyOrderReadyByKitchenCommandHandler notifyReadyByKitchenHandler,
         IAddOrderItemCommandHandler addOrderItemHandler,
         IAddNoteToOrderCommandHandler addNoteHandler,
         IUpdateItemStatusCommandHandler updateItemStatusHandler,
@@ -60,7 +60,7 @@ public sealed class OrdersController : ControllerBase
     {
         _createOrderHandler = createOrderHandler;
         _changeStatusHandler = changeStatusHandler;
-        _markReadyByKitchenHandler = markReadyByKitchenHandler;
+        _notifyReadyByKitchenHandler = notifyReadyByKitchenHandler;
         _addOrderItemHandler = addOrderItemHandler;
         _addNoteHandler = addNoteHandler;
         _updateItemStatusHandler = updateItemStatusHandler;
@@ -175,7 +175,7 @@ public sealed class OrdersController : ControllerBase
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<OrderResponseDto>> MarkReadyByKitchen(Guid id, [FromBody] KitchenReadyRequest? req, CancellationToken ct)
-        => Ok(await _markReadyByKitchenHandler.Handle(new MarkOrderReadyByKitchenCommand { OrderId = id, WasDelayed = req?.WasDelayed == true }, ct));
+        => Ok(await _notifyReadyByKitchenHandler.Handle(new NotifyOrderReadyByKitchenCommand { OrderId = id, WasDelayed = req?.WasDelayed == true }, ct));
 
     [HttpPost("{id:guid}/notes")]
     [Authorize(Roles = ApplicationRoles.AdminWaitressOrKitchen)]
