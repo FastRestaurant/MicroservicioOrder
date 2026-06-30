@@ -26,14 +26,32 @@ public sealed class GetAllTablesQueryHandler : IGetAllTablesQueryHandler
         if (query.PageSize < 1 || query.PageSize > MaxPageSize)
             throw new ValidationException($"El tamaño de página debe estar entre 1 y {MaxPageSize}.");
 
-        var (tables, totalCount) = await _tableRepository.GetPagedAsync(query.Page, query.PageSize, cancellationToken);
-        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)query.PageSize);
+        var tables = await _tableRepository.GetAllAsync(cancellationToken);
         var activeStatusesByTableId = await _orderRepository.GetActiveStatusNamesByTableIdsAsync(
             tables.Select(table => table.Id), cancellationToken);
         var activeWaiterIdsByTableId = await _orderRepository.GetActiveWaiterIdsByTableIdsAsync(
             tables.Select(table => table.Id), cancellationToken);
 
-        var tableDtos = tables.Select(table => Map(table, activeStatusesByTableId, activeWaiterIdsByTableId)).ToArray();
+        var allTableDtos = tables
+            .Select(table => Map(table, activeStatusesByTableId, activeWaiterIdsByTableId))
+            .ToArray();
+
+        var statusCounts = allTableDtos
+            .GroupBy(table => table.OperationalStatus)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        var filteredTables = string.IsNullOrWhiteSpace(query.Status)
+            ? allTableDtos
+            : allTableDtos
+                .Where(table => string.Equals(table.OperationalStatus, query.Status.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+        var totalCount = filteredTables.Length;
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)query.PageSize);
+        var tableDtos = filteredTables
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToArray();
 
         return new PagedResponseDto<TableResponseDto>
         {
@@ -41,7 +59,8 @@ public sealed class GetAllTablesQueryHandler : IGetAllTablesQueryHandler
             Page = query.Page,
             PageSize = query.PageSize,
             TotalItems = totalCount,
-            TotalPages = totalPages
+            TotalPages = totalPages,
+            StatusCounts = statusCounts
         };
     }
 
