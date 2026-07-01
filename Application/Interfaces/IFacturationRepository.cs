@@ -18,5 +18,6 @@ namespace Application.Interfaces
             PaymentFilter filter);
 
         Task<bool> MarkAsPaidAsync(int facturaId);
+        Task<Factura> CreateAsync(Factura factura);
     }
 }

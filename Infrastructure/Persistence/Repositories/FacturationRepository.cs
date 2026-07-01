@@ -79,7 +79,31 @@ namespace Infrastructure.Persistence.Repositories
 
             return true;
         }
+        public async Task<Factura> CreateAsync(Factura factura)
+        {
+            if (factura == null)
+                throw new ArgumentNullException(nameof(factura));
 
+            if (factura.Details == null || factura.Details.Count == 0)
+                throw new InvalidOperationException("La factura debe tener al menos un detalle.");
+
+            factura.Date = DateTime.UtcNow;
+
+            factura.IsPaid = false;
+
+            factura.Total = factura.Details.Sum(d => d.Price * d.Quantity);
+
+
+            foreach (var detail in factura.Details)
+            {
+                detail.FacturaId = factura.Id; 
+            }
+
+            await _context.Facturas.AddAsync(factura);
+            await _context.SaveChangesAsync();
+
+            return factura;
+        }
 
     }
 }
