@@ -23,7 +23,7 @@ public sealed class UpdateTablePositionCommandHandler : IUpdateTablePositionComm
         if (command.TableId == Guid.Empty)
             throw new ValidationException("El id de la mesa es obligatorio.");
 
-        var table = await _tableRepository.GetByIdAsync(command.TableId, cancellationToken)
+        var table = await _tableRepository.GetByIdForUpdateAsync(command.TableId, cancellationToken)
             ?? throw new NotFoundException(nameof(Table), command.TableId);
 
         table.UpdatePosition(command.PositionX, command.PositionY);
