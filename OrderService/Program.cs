@@ -35,6 +35,11 @@ using OrderService.Presentation.Realtime;
 using OrderService.Application.Realtime;
 using System.Security.Claims;
 using System.Text;
+using Application.Interfaces;
+using Application.UseCases.Facturation.Queries;
+using Application.UseCases.Facturation.Commands;
+using Infrastructure.Persistence.Repositories;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +49,14 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IStatusRepository, StatusRepository>();
 builder.Services.AddScoped<ITableRepository, TableRepository>();
+builder.Services.AddScoped<IFacturationRepository, FacturationRepository>();
+
+
+builder.Services.AddScoped<IGetFacturasHandler, GetFacturasHandler>();
+builder.Services.AddScoped<IConfirmPaymentHandler, ConfirmPaymentHandler>();
+
+
+
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<AuthorizationHeaderPropagationHandler>();

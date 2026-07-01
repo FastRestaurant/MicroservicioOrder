@@ -1,3 +1,4 @@
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Domain.Entities;
 
@@ -8,6 +9,7 @@ public static class AppDbInitializer
     public static async Task InitializeAsync(AppDbContext context, CancellationToken cancellationToken = default)
     {
         await SeedTablesAsync(context, cancellationToken);
+        await SeedFacturasAsync(context, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
     }
 
@@ -46,4 +48,86 @@ public static class AppDbInitializer
     };
 
     private sealed record TableSeed(string Number, int SeatCount, string Location, bool IsEnabled);
+
+    private static async Task SeedFacturasAsync(AppDbContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Facturas.AnyAsync(cancellationToken))
+            return;
+
+        var random = new Random();
+
+        var productos = new List<(string name, decimal price)>
+    {
+        ("Hamburguesa", 10000),
+        ("Pizza Muzzarella", 12000),
+        ("Papas fritas", 6000),
+        ("Milanesa Napolitana", 14000),
+        ("Coca Cola", 3000),
+        ("Empanadas", 1500),
+        ("Lomito", 15000),
+        ("Agua", 2000),
+        ("Cerveza", 3500),
+        ("Helado", 4000),
+        ("Ravioles", 11000),
+        ("Asado", 20000),
+        ("Tostado", 7000)
+    };
+
+        var facturas = new List<Factura>();
+
+        var startDate = DateTime.Now.AddYears(-1);
+
+        for (int i = 0; i < 100; i++)
+        {
+            // 📅 distribución realista en 1 año
+            var date = startDate.AddDays(random.Next(0, 365))
+                                .AddHours(random.Next(12, 23))
+                                .AddMinutes(random.Next(0, 60));
+
+            var factura = new Factura
+            {
+                TableNumber = random.Next(1, 15),
+                Date = date,
+                IsPaid = random.NextDouble() > 0.35, // 65% pagadas
+                Details = new List<FacturaDetail>()
+            };
+
+            int items = random.Next(1, 5); // 1 a 4 platos por factura
+            decimal total = 0;
+
+            var usedProducts = new HashSet<int>();
+
+            for (int j = 0; j < items; j++)
+            {
+                int index;
+
+                // evitar repetir plato en la misma factura
+                do
+                {
+                    index = random.Next(productos.Count);
+                }
+                while (usedProducts.Contains(index));
+
+                usedProducts.Add(index);
+
+                var p = productos[index];
+                var qty = random.Next(1, 3);
+
+                factura.Details.Add(new FacturaDetail
+                {
+                    ProductName = p.name,
+                    Quantity = qty,
+                    Price = p.price
+                });
+
+                total += p.price * qty;
+            }
+
+            factura.Total = total;
+
+            facturas.Add(factura);
+        }
+
+        await context.Facturas.AddRangeAsync(facturas, cancellationToken);
+    }
 }
