@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🧾 Microservicio de Pedidos</h1>
+  <h1>🧾 Microservicio de Órdenes</h1>
   <h3> Encargado de la gestión de órdenes, mesas y su ciclo de vida en el restaurante. </h3>
 </div>
 
