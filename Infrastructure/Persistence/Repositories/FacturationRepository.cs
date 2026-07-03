@@ -105,5 +105,12 @@ namespace Infrastructure.Persistence.Repositories
             return factura;
         }
 
+        public async Task AddAsync(Factura factura, CancellationToken ct = default)
+        {
+            await _context.Facturas.AddAsync(factura, ct);
+        }
+
+
+
     }
 }

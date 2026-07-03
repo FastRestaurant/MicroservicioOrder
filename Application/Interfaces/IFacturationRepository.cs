@@ -19,5 +19,6 @@ namespace Application.Interfaces
 
         Task<bool> MarkAsPaidAsync(int facturaId);
         Task<Factura> CreateAsync(Factura factura);
+        Task AddAsync(Factura factura, CancellationToken ct = default);
     }
 }

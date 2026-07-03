@@ -11,6 +11,7 @@ using Application.UseCases.Facturation.Queries;
 using OrderService.Domain.Exceptions;
 using OrderService.Presentation.Authorization;
 using System.Security.Claims;
+using System.Reflection.Metadata;
 
 namespace OrderService.Controllers
 {
@@ -21,13 +22,17 @@ namespace OrderService.Controllers
     {
         private readonly IGetFacturasHandler _getFacturasHandler;
         private readonly IConfirmPaymentHandler _confirmPaymentHandler;
+        private readonly ICreateInvoiceFromOrdersCommandHandler _createInvoiceHandler;
 
         public FacturationAndMetricalController(
             IGetFacturasHandler getFacturasHandler,
-            IConfirmPaymentHandler confirmPaymentHandler)
+            IConfirmPaymentHandler confirmPaymentHandler,
+            ICreateInvoiceFromOrdersCommandHandler createInvoiceFromOrdersCommandHandler)
         {
             _getFacturasHandler = getFacturasHandler;
             _confirmPaymentHandler = confirmPaymentHandler;
+            _createInvoiceHandler = createInvoiceFromOrdersCommandHandler;
+            
         }
 
 
@@ -52,5 +57,12 @@ namespace OrderService.Controllers
             return NoContent();
         }
 
+        [HttpPost("facturas/from-orders")]
+        public async Task<IActionResult> CreateFromOrders(
+         [FromBody] CreateInvoiceFromOrdersCommand command,CancellationToken cancellationToken)
+        {
+            await _createInvoiceHandler.Handle(command, cancellationToken);
+            return Ok();
+        }
     }
 }

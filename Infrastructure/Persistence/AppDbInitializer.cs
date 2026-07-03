@@ -86,7 +86,7 @@ public static class AppDbInitializer
 
             var factura = new Factura
             {
-                TableNumber = random.Next(1, 15),
+                TableName = random.Next(1, 15).ToString(),
                 Date = date,
                 IsPaid = random.NextDouble() > 0.35, // 65% pagadas
                 Details = new List<FacturaDetail>()

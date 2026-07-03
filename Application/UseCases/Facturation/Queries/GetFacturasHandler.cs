@@ -32,7 +32,7 @@ namespace Application.UseCases.Facturation.Queries
             var dtoItems = items.Select(x => new FacturaDto
             {
                 Id = x.Id,
-                TableNumber = x.TableNumber,
+                TableName = x.TableName,
                 Date = x.Date,
                 IsPaid = x.IsPaid,
                 Total = x.Total,

@@ -167,14 +167,14 @@ public class AppDbContext : DbContext
             e.ToTable("Facturas");
             e.HasKey(f => f.Id);
             e.Property(f => f.Id).ValueGeneratedOnAdd();
-            e.Property(f => f.TableNumber).IsRequired();
+            e.Property(f => f.TableName).IsRequired();
             e.Property(f => f.Date).IsRequired();
             e.Property(f => f.IsPaid).IsRequired();
             e.Property(f => f.Total).HasColumnType("decimal(18,2)").IsRequired();
 
             e.HasIndex(f => f.Date);
             e.HasIndex(f => f.IsPaid);
-            e.HasIndex(f => f.TableNumber);
+            e.HasIndex(f => f.TableName);
 
             e.HasMany(f => f.Details)
              .WithOne(d => d.Factura)

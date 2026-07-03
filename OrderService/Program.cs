@@ -145,6 +145,7 @@ builder.Services.AddScoped<ICreateTableCommandHandler, CreateTableCommandHandler
 builder.Services.AddScoped<IDeleteTableCommandHandler, DeleteTableCommandHandler>();
 builder.Services.AddScoped<IUpdateTableCommandHandler, UpdateTableCommandHandler>();
 builder.Services.AddScoped<IToggleTableStatusCommandHandler, ToggleTableStatusCommandHandler>();
+builder.Services.AddScoped<ICreateInvoiceFromOrdersCommandHandler, CreateInvoiceFromOrdersCommandHandler>();
 
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>

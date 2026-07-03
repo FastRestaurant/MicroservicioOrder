@@ -9,7 +9,7 @@ namespace Application.DTOs
     public class FacturaDto
     {
         public int Id { get; set; }
-        public int TableNumber { get; set; }
+        public string TableName { get; set; }
 
         public DateTime Date { get; set; }
 
